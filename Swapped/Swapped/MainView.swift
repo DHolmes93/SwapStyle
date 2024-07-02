@@ -4,12 +4,29 @@
 //
 //  Created by Donovan Holmes on 7/1/24.
 //
-
 import SwiftUI
 
 struct MainView: View {
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        TabView {
+            HomeScreenView()
+                .tabItem {
+                    Label("Home", systemImage: "house")
+                }
+            SearchScreenView()
+                .tabItem {
+                    Label("Search", systemImage: "magnifyingglass")
+                }
+            SwappedView()
+                .tabItem {
+                    Label("Deeds", systemImage: "heart")
+                }
+            AccountView()
+                .tabItem {
+                    Label("Account", systemImage: "person")
+                }
+            
+        }
     }
 }
 
