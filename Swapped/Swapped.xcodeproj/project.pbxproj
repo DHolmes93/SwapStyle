@@ -36,6 +36,11 @@
 		120958782C34247F001D7133 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 120958772C34247F001D7133 /* FirebaseStorage */; };
 		1209587A2C344B70001D7133 /* AddItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120958792C344B70001D7133 /* AddItem.swift */; };
 		1209587C2C34638E001D7133 /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1209587B2C34638E001D7133 /* ItemView.swift */; };
+		1209587E2C3488E6001D7133 /* SignUpViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1209587D2C3488E6001D7133 /* SignUpViewController.swift */; };
+		128EBE1F2C366979002F9C0D /* SwapCart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128EBE1E2C366979002F9C0D /* SwapCart.swift */; };
+		128EBE212C366C43002F9C0D /* SwapCartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128EBE202C366C43002F9C0D /* SwapCartView.swift */; };
+		128EBE232C37255C002F9C0D /* SwappedItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128EBE222C37255B002F9C0D /* SwappedItemsView.swift */; };
+		12AA76B02C357596007B032E /* ScrambleEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12AA76AF2C357596007B032E /* ScrambleEffect.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,6 +86,11 @@
 		120958732C33BE2E001D7133 /* ItemManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemManager.swift; sourceTree = "<group>"; };
 		120958792C344B70001D7133 /* AddItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItem.swift; sourceTree = "<group>"; };
 		1209587B2C34638E001D7133 /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
+		1209587D2C3488E6001D7133 /* SignUpViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpViewController.swift; sourceTree = "<group>"; };
+		128EBE1E2C366979002F9C0D /* SwapCart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapCart.swift; sourceTree = "<group>"; };
+		128EBE202C366C43002F9C0D /* SwapCartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapCartView.swift; sourceTree = "<group>"; };
+		128EBE222C37255B002F9C0D /* SwappedItemsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwappedItemsView.swift; sourceTree = "<group>"; };
+		12AA76AF2C357596007B032E /* ScrambleEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrambleEffect.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -197,6 +207,8 @@
 				1209586D2C33B412001D7133 /* SignUpView.swift */,
 				120958792C344B70001D7133 /* AddItem.swift */,
 				1209587B2C34638E001D7133 /* ItemView.swift */,
+				128EBE202C366C43002F9C0D /* SwapCartView.swift */,
+				128EBE222C37255B002F9C0D /* SwappedItemsView.swift */,
 			);
 			path = Screens;
 			sourceTree = "<group>";
@@ -205,6 +217,7 @@
 			isa = PBXGroup;
 			children = (
 				1209585B2C33B0DB001D7133 /* SignInViewController.swift */,
+				1209587D2C3488E6001D7133 /* SignUpViewController.swift */,
 			);
 			path = SignIn;
 			sourceTree = "<group>";
@@ -215,6 +228,8 @@
 				1209586F2C33B9DA001D7133 /* UserAccountModel.swift */,
 				120958712C33BA14001D7133 /* ImagePicker.swift */,
 				120958732C33BE2E001D7133 /* ItemManager.swift */,
+				12AA76AF2C357596007B032E /* ScrambleEffect.swift */,
+				128EBE1E2C366979002F9C0D /* SwapCart.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -374,15 +389,20 @@
 				1209586A2C33B2ED001D7133 /* SearchScreenView.swift in Sources */,
 				1209587C2C34638E001D7133 /* ItemView.swift in Sources */,
 				120958222C33ADF6001D7133 /* ContentView.swift in Sources */,
+				1209587E2C3488E6001D7133 /* SignUpViewController.swift in Sources */,
 				1209584F2C33AF64001D7133 /* AuthManager.swift in Sources */,
 				1209586C2C33B3CF001D7133 /* SignInView.swift in Sources */,
 				1209586E2C33B412001D7133 /* SignUpView.swift in Sources */,
+				128EBE232C37255C002F9C0D /* SwappedItemsView.swift in Sources */,
 				120958702C33B9DA001D7133 /* UserAccountModel.swift in Sources */,
 				120958652C33B264001D7133 /* SwappedView.swift in Sources */,
 				120958612C33B1C9001D7133 /* HomeScreenView.swift in Sources */,
 				120958632C33B226001D7133 /* AccountView.swift in Sources */,
+				128EBE212C366C43002F9C0D /* SwapCartView.swift in Sources */,
+				12AA76B02C357596007B032E /* ScrambleEffect.swift in Sources */,
 				1209585F2C33B19B001D7133 /* MainView.swift in Sources */,
 				120958742C33BE2E001D7133 /* ItemManager.swift in Sources */,
+				128EBE1F2C366979002F9C0D /* SwapCart.swift in Sources */,
 				120958202C33ADF6001D7133 /* SwappedApp.swift in Sources */,
 				1209587A2C344B70001D7133 /* AddItem.swift in Sources */,
 			);

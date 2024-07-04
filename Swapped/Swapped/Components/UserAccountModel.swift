@@ -8,12 +8,19 @@
 import Foundation
 import FirebaseAuth
 import SwiftUI
+import FirebaseFirestore
+
+
+
 
 
 class UserAccountModel: ObservableObject {
     @Published var name: String = ""
     @Published var email: String = ""
     @Published var password: String = ""
+    @Published var city: String = ""
+    @Published var state: String = ""
+    @Published var zipcode: String = ""
     @Published var profileImage: UIImage?
     
     private let authManager = AuthManager.shared
@@ -23,6 +30,10 @@ class UserAccountModel: ObservableObject {
         if let currentUser = Auth.auth().currentUser {
                 name = currentUser.displayName ?? ""
                 email = currentUser.email ?? ""
+            
+            
+            fetchUserDetails(uid: currentUser.uid)
+            
             }
         }
     func saveUserDetails() {
@@ -55,6 +66,7 @@ class UserAccountModel: ObservableObject {
                     }
                 }
             }
+            saveUserAdditionalDetails(uid: currentUser.uid)
         }
     }
         
@@ -68,4 +80,31 @@ class UserAccountModel: ObservableObject {
                 }
             }
         }
+    
+    private func fetchUserDetails(uid: String) {
+        Firestore.firestore().collection("users").document(uid).getDocument { snapshot, error in
+            if let error = error {
+                print("Error fetching user details: \(error.localizedDescription)")
+                return
+            }
+            guard let data = snapshot?.data() else { return }
+            self.city = data["city"] as? String ?? ""
+            self.state = data["state"] as? String ?? ""
+            self.zipcode = data["zipcode"] as? String ?? ""
+        }
+    }
+    private func saveUserAdditionalDetails(uid: String) {
+        let userData: [String: Any] = [
+            "city": city,
+            "state": state,
+            "zipcode": zipcode
+        ]
+        Firestore.firestore().collection("users").document(uid).setData(userData, merge: true) { error in
+            if let error = error {
+                print("Error saving user details: \(error.localizedDescription)")
+            } else {
+                print("User details saved successfully")
+            }
+        }
+    }
     }

@@ -77,6 +77,8 @@ class AuthManager: ObservableObject {
             completion(.failure(signOutError))
         }
     }
+ 
+    
             }
 
 struct User {

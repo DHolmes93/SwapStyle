@@ -6,11 +6,13 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct AccountView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var viewModel = UserAccountModel()
     @State private var isImagePickerPresented = false
+
     
     var body: some View {
         NavigationStack {
@@ -33,7 +35,7 @@ struct AccountView: View {
                     }
                 }
                 .sheet(isPresented: $isImagePickerPresented) {
-                    ImagePicker(image: $viewModel.profileImage)
+                    ImagePicker(image: $viewModel.profileImage, images: .constant([]), selectionLimit: 1)
                     
                 }
                 TextField("Name", text: $viewModel.name)
@@ -47,9 +49,19 @@ struct AccountView: View {
                 SecureField("Password", text: $viewModel.password)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding(.horizontal)
+                TextField("City", text: $viewModel.city)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal)
+                TextField("State", text: $viewModel.state)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal)
+                TextField("Zipcode", text: $viewModel.zipcode)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal)
                 
                 Button(action: {
                     viewModel.saveUserDetails()
+                    
                 }) {
                     Text("Save")
                         .padding()

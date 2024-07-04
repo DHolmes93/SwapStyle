@@ -17,10 +17,17 @@ struct MainView: View {
                 .tabItem {
                     Label("Search", systemImage: "magnifyingglass")
                 }
+            
+            AddItem()
+                .tabItem {
+                    Label("Add Item", systemImage: "plus")
+                }
             SwappedView()
                 .tabItem {
-                    Label("Deeds", systemImage: "heart")
+                    Label("Swaps", systemImage: "rectangle.2.swap")
                 }
+           
+            
             AccountView()
                 .tabItem {
                     Label("Account", systemImage: "person")
