@@ -40,6 +40,10 @@
 		128EBE1F2C366979002F9C0D /* SwapCart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128EBE1E2C366979002F9C0D /* SwapCart.swift */; };
 		128EBE212C366C43002F9C0D /* SwapCartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128EBE202C366C43002F9C0D /* SwapCartView.swift */; };
 		128EBE232C37255C002F9C0D /* SwappedItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128EBE222C37255B002F9C0D /* SwappedItemsView.swift */; };
+		128EBE252C373483002F9C0D /* CurrentUserItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128EBE242C373483002F9C0D /* CurrentUserItemsView.swift */; };
+		128EBE272C3734AB002F9C0D /* MessagingScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128EBE262C3734AB002F9C0D /* MessagingScreenView.swift */; };
+		128EBE292C37C7AE002F9C0D /* ItemCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128EBE282C37C7AD002F9C0D /* ItemCategoryView.swift */; };
+		128EBE2B2C37CA29002F9C0D /* CategoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128EBE2A2C37CA29002F9C0D /* CategoryManager.swift */; };
 		12AA76B02C357596007B032E /* ScrambleEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12AA76AF2C357596007B032E /* ScrambleEffect.swift */; };
 /* End PBXBuildFile section */
 
@@ -90,6 +94,10 @@
 		128EBE1E2C366979002F9C0D /* SwapCart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapCart.swift; sourceTree = "<group>"; };
 		128EBE202C366C43002F9C0D /* SwapCartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapCartView.swift; sourceTree = "<group>"; };
 		128EBE222C37255B002F9C0D /* SwappedItemsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwappedItemsView.swift; sourceTree = "<group>"; };
+		128EBE242C373483002F9C0D /* CurrentUserItemsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentUserItemsView.swift; sourceTree = "<group>"; };
+		128EBE262C3734AB002F9C0D /* MessagingScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagingScreenView.swift; sourceTree = "<group>"; };
+		128EBE282C37C7AD002F9C0D /* ItemCategoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemCategoryView.swift; sourceTree = "<group>"; };
+		128EBE2A2C37CA29002F9C0D /* CategoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryManager.swift; sourceTree = "<group>"; };
 		12AA76AF2C357596007B032E /* ScrambleEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrambleEffect.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -209,6 +217,9 @@
 				1209587B2C34638E001D7133 /* ItemView.swift */,
 				128EBE202C366C43002F9C0D /* SwapCartView.swift */,
 				128EBE222C37255B002F9C0D /* SwappedItemsView.swift */,
+				128EBE242C373483002F9C0D /* CurrentUserItemsView.swift */,
+				128EBE262C3734AB002F9C0D /* MessagingScreenView.swift */,
+				128EBE282C37C7AD002F9C0D /* ItemCategoryView.swift */,
 			);
 			path = Screens;
 			sourceTree = "<group>";
@@ -230,6 +241,7 @@
 				120958732C33BE2E001D7133 /* ItemManager.swift */,
 				12AA76AF2C357596007B032E /* ScrambleEffect.swift */,
 				128EBE1E2C366979002F9C0D /* SwapCart.swift */,
+				128EBE2A2C37CA29002F9C0D /* CategoryManager.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -385,6 +397,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				120958722C33BA14001D7133 /* ImagePicker.swift in Sources */,
+				128EBE292C37C7AE002F9C0D /* ItemCategoryView.swift in Sources */,
 				1209585C2C33B0DB001D7133 /* SignInViewController.swift in Sources */,
 				1209586A2C33B2ED001D7133 /* SearchScreenView.swift in Sources */,
 				1209587C2C34638E001D7133 /* ItemView.swift in Sources */,
@@ -395,7 +408,10 @@
 				1209586E2C33B412001D7133 /* SignUpView.swift in Sources */,
 				128EBE232C37255C002F9C0D /* SwappedItemsView.swift in Sources */,
 				120958702C33B9DA001D7133 /* UserAccountModel.swift in Sources */,
+				128EBE272C3734AB002F9C0D /* MessagingScreenView.swift in Sources */,
+				128EBE252C373483002F9C0D /* CurrentUserItemsView.swift in Sources */,
 				120958652C33B264001D7133 /* SwappedView.swift in Sources */,
+				128EBE2B2C37CA29002F9C0D /* CategoryManager.swift in Sources */,
 				120958612C33B1C9001D7133 /* HomeScreenView.swift in Sources */,
 				120958632C33B226001D7133 /* AccountView.swift in Sources */,
 				128EBE212C366C43002F9C0D /* SwapCartView.swift in Sources */,

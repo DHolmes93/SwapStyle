@@ -13,14 +13,13 @@ struct AddItem: View {
     @State private var price = ""
     @State private var condition = "Good"
     @State private var description = ""
-    @State private var selectedCategory = "Electronics"
+    @State private var selectedCategory = CategoryManager.shared.categories.first!.name
     @State private var showImagePicker = false
     @State private var images: [UIImage] = []
     @State private var isUploading = false
     @Environment(\.presentationMode) var presentationMode
     
-    
-    let categories = ["Home & Garden", "Electronics", "Clothing", "Toys", "Books", "Furniture", "Other", "Sports", "Vintage & Antiques", "Automotive", "Medical Equipment", "Equipment", "Holiday", "Arts & Crafts", "Event"]
+    @ObservedObject private var categoryManager = CategoryManager.shared
     
     var body: some View {
         NavigationStack {
@@ -60,8 +59,8 @@ struct AddItem: View {
                     .padding()
                     
                     Picker("Category", selection: $selectedCategory) {
-                        ForEach(categories, id: \.self) { category in
-                            Text(category).tag(category)
+                        ForEach(categoryManager.categories) { category in
+                            Text(category.name).tag(category.name)
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
@@ -157,7 +156,7 @@ struct AddItem: View {
         
         for image in images {
             dispatchGroup.enter()
-            ItemManager.shared.uploadItem(image: image, name: name, details: details, price: priceValue, condition: condition, description: description, timestamp: Date(), category: selectedCategory) { result in
+            ItemManager.shared.uploadItem(images: [image], name: name, details: details, price: priceValue, condition: condition, description: description, timestamp: Date(), category: selectedCategory) { result in
                 switch result {
                 case .success:
                     if let imageUrl = imageUrls.first {

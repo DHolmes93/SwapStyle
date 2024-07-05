@@ -26,6 +26,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 struct SwappedApp: App {
     @StateObject private var authManager = AuthManager.shared
     @StateObject private var swapCart = SwapCart.shared
+    @StateObject private var categoryManager = CategoryManager.shared
         @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
         
     var body: some Scene {
@@ -34,6 +35,7 @@ struct SwappedApp: App {
                 MainView()
                     .environmentObject(authManager)
                     .environmentObject(swapCart)
+                    .environmentObject(categoryManager)
             } else {
                 SignInView().environmentObject(authManager)
             }

@@ -10,19 +10,27 @@ import SwiftUI
 struct ItemView: View {
     let item: Item
     @State private var animateSwap = false
+    @State private var addedToCart = false
     @EnvironmentObject private var swapCart: SwapCart
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            AsyncImage(url: URL(string: item.imageUrl)) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-            } placeholder: {
-                ProgressView()
+            ScrollView(.horizontal) {
+                HStack {
+                    ForEach(item.imageUrls, id: \.self) { imageUrl in
+                        AsyncImage(url: URL(string: imageUrl)) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                        } placeholder: {
+                            ProgressView()
+                        }
+                        .frame(maxHeight: 400)
+                        .cornerRadius(10)
+                    }
+                }
             }
-            .frame(maxHeight: 400)
-            .cornerRadius(10)
+            Text("Product Owner: \(item.userName ?? "Unknown User")")
             Text(item.name)
                 .font(.headline)
             Text("Condition: \(item.condition)")
@@ -53,16 +61,26 @@ struct ItemView: View {
                 
             }
             .frame(height: /*@START_MENU_TOKEN@*/100/*@END_MENU_TOKEN@*/)
+            HStack(spacing: 90) {
             Button(action: {
                 swapCart.addItem(item)
+                addedToCart = true
             }) {
-                Text("Add to Cart")
+                Text(addedToCart ? "Added" : "Add to Cart")
                     .foregroundColor(.black)
                     .padding()
                     .background(Color.red)
                     .cornerRadius(5)
             }
+            NavigationLink(destination: MessagingScreenView(currentUserId: "currentUserId", otherUserId: item.uid, chatId: "\(item.uid)_chat")) {
+                Text("Send Message")
+                    .foregroundColor(.black)
+                    .padding()
+                    .background(Color.blue)
+                    .cornerRadius(5)
+            }
         }
+    }
         .padding()
     }
     func isPossibleSwapMatch(for item: Item) -> Bool {
@@ -82,7 +100,7 @@ struct ItemView: View {
                 name: "Sample Item",
                 details: "Sample details",
                 price: 120.0,
-                imageUrl: "https://via.placeholder.com/150",
+                imageUrls: ["https://via.placeholder.com/150", "https://via.placeholder.com/150"],
                 condition: "Good",
                 description: "This is a sample description of the item.",
                 timestamp: Date(),
