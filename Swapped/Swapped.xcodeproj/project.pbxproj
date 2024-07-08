@@ -37,6 +37,9 @@
 		1209587A2C344B70001D7133 /* AddItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120958792C344B70001D7133 /* AddItem.swift */; };
 		1209587C2C34638E001D7133 /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1209587B2C34638E001D7133 /* ItemView.swift */; };
 		1209587E2C3488E6001D7133 /* SignUpViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1209587D2C3488E6001D7133 /* SignUpViewController.swift */; };
+		1209B1332C3B3225006A7F79 /* BottomBarNavigator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1209B1322C3B3225006A7F79 /* BottomBarNavigator.swift */; };
+		12854DA72C3C754200C34C92 /* itemRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12854DA62C3C754200C34C92 /* itemRowView.swift */; };
+		12854DAA2C3C763A00C34C92 /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 12854DA92C3C763A00C34C92 /* SDWebImageSwiftUI */; };
 		128EBE1F2C366979002F9C0D /* SwapCart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128EBE1E2C366979002F9C0D /* SwapCart.swift */; };
 		128EBE212C366C43002F9C0D /* SwapCartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128EBE202C366C43002F9C0D /* SwapCartView.swift */; };
 		128EBE232C37255C002F9C0D /* SwappedItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128EBE222C37255B002F9C0D /* SwappedItemsView.swift */; };
@@ -91,6 +94,8 @@
 		120958792C344B70001D7133 /* AddItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItem.swift; sourceTree = "<group>"; };
 		1209587B2C34638E001D7133 /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		1209587D2C3488E6001D7133 /* SignUpViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpViewController.swift; sourceTree = "<group>"; };
+		1209B1322C3B3225006A7F79 /* BottomBarNavigator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomBarNavigator.swift; sourceTree = "<group>"; };
+		12854DA62C3C754200C34C92 /* itemRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = itemRowView.swift; sourceTree = "<group>"; };
 		128EBE1E2C366979002F9C0D /* SwapCart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapCart.swift; sourceTree = "<group>"; };
 		128EBE202C366C43002F9C0D /* SwapCartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapCartView.swift; sourceTree = "<group>"; };
 		128EBE222C37255B002F9C0D /* SwappedItemsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwappedItemsView.swift; sourceTree = "<group>"; };
@@ -110,6 +115,7 @@
 				120958542C33AFF6001D7133 /* FirebaseAnalyticsSwift in Frameworks */,
 				120958582C33AFF6001D7133 /* FirebaseFirestore in Frameworks */,
 				120958562C33AFF6001D7133 /* FirebaseAuth in Frameworks */,
+				12854DAA2C3C763A00C34C92 /* SDWebImageSwiftUI in Frameworks */,
 				120958782C34247F001D7133 /* FirebaseStorage in Frameworks */,
 				120958522C33AFF6001D7133 /* FirebaseAnalytics in Frameworks */,
 				120958762C33BEB6001D7133 /* FirebaseFirestoreSwift in Frameworks */,
@@ -220,6 +226,8 @@
 				128EBE242C373483002F9C0D /* CurrentUserItemsView.swift */,
 				128EBE262C3734AB002F9C0D /* MessagingScreenView.swift */,
 				128EBE282C37C7AD002F9C0D /* ItemCategoryView.swift */,
+				1209B1322C3B3225006A7F79 /* BottomBarNavigator.swift */,
+				12854DA62C3C754200C34C92 /* itemRowView.swift */,
 			);
 			path = Screens;
 			sourceTree = "<group>";
@@ -277,6 +285,7 @@
 				120958672C33B2BB001D7133 /* FirebaseDatabase */,
 				120958752C33BEB6001D7133 /* FirebaseFirestoreSwift */,
 				120958772C34247F001D7133 /* FirebaseStorage */,
+				12854DA92C3C763A00C34C92 /* SDWebImageSwiftUI */,
 			);
 			productName = Swapped;
 			productReference = 1209581C2C33ADF6001D7133 /* Swapped.app */;
@@ -352,6 +361,7 @@
 			mainGroup = 120958132C33ADF6001D7133;
 			packageReferences = (
 				120958502C33AFF6001D7133 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				12854DA82C3C763900C34C92 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */,
 			);
 			productRefGroup = 1209581D2C33ADF6001D7133 /* Products */;
 			projectDirPath = "";
@@ -405,6 +415,7 @@
 				1209587E2C3488E6001D7133 /* SignUpViewController.swift in Sources */,
 				1209584F2C33AF64001D7133 /* AuthManager.swift in Sources */,
 				1209586C2C33B3CF001D7133 /* SignInView.swift in Sources */,
+				12854DA72C3C754200C34C92 /* itemRowView.swift in Sources */,
 				1209586E2C33B412001D7133 /* SignUpView.swift in Sources */,
 				128EBE232C37255C002F9C0D /* SwappedItemsView.swift in Sources */,
 				120958702C33B9DA001D7133 /* UserAccountModel.swift in Sources */,
@@ -412,6 +423,7 @@
 				128EBE252C373483002F9C0D /* CurrentUserItemsView.swift in Sources */,
 				120958652C33B264001D7133 /* SwappedView.swift in Sources */,
 				128EBE2B2C37CA29002F9C0D /* CategoryManager.swift in Sources */,
+				1209B1332C3B3225006A7F79 /* BottomBarNavigator.swift in Sources */,
 				120958612C33B1C9001D7133 /* HomeScreenView.swift in Sources */,
 				120958632C33B226001D7133 /* AccountView.swift in Sources */,
 				128EBE212C366C43002F9C0D /* SwapCartView.swift in Sources */,
@@ -762,6 +774,14 @@
 				minimumVersion = 10.28.1;
 			};
 		};
+		12854DA82C3C763900C34C92 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SDWebImage/SDWebImageSwiftUI.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -799,6 +819,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 120958502C33AFF6001D7133 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseStorage;
+		};
+		12854DA92C3C763A00C34C92 /* SDWebImageSwiftUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 12854DA82C3C763900C34C92 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */;
+			productName = SDWebImageSwiftUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

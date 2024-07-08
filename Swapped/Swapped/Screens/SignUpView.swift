@@ -60,15 +60,15 @@ struct SignUpView: View {
     
     var body: some View {
         ZStack {
-            Color.blue.edgesIgnoringSafeArea(.all)
+            Color("mainColor").edgesIgnoringSafeArea(.all)
             RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .foregroundStyle(.linearGradient(colors: [.pink, .yellow], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .foregroundStyle(.linearGradient(colors: [Color("secondColor")], startPoint: .topLeading, endPoint: .bottomTrailing))
                 .frame(width: 1000, height: 400)
                 .rotationEffect(.degrees(145))
                 .offset(y: -350)
             
             Rectangle()
-                .fill(Color.white)
+                .fill(Color("AccentColor"))
                 .frame(width: 5, height: 700)
                 .rotationEffect(.degrees(55))
                 .offset(y: -105)
@@ -84,24 +84,24 @@ struct SignUpView: View {
                             .padding()
                             .background(Color.gray.opacity(0.2))
                             .cornerRadius(5)
-                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.blue, lineWidth: 2))
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color("AccentColor"), lineWidth: 2))
                       
                         TextField("Email", text: $email, prompt: Text("Email").foregroundColor(.black)).foregroundColor(.black)
                             .padding()
                             .background(Color.gray.opacity(0.2))
                             .cornerRadius(5)
-                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.blue, lineWidth: 2))
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color("AccentColor"), lineWidth: 2))
     
                         SecureField("Password", text: $password, prompt: Text("Password").foregroundColor(.black))
                             .padding()
                             .background(Color.gray.opacity(0.2))
                             .cornerRadius(5)
-                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.blue, lineWidth: 2))
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color("AccentColor"), lineWidth: 2))
                         SecureField("Confirm Password", text: $confirmPassword, prompt: Text("Confirm Password").foregroundColor(.black))
                             .padding()
                             .background(Color.gray.opacity(0.2))
                             .cornerRadius(5)
-                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.blue, lineWidth: 2))
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color("AccentColor"), lineWidth: 2))
                         
                         
                     }
@@ -112,19 +112,19 @@ struct SignUpView: View {
                             .padding()
                             .background(Color.gray.opacity(0.2))
                             .cornerRadius(5)
-                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.orange, lineWidth: 2))
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color("secondColor"), lineWidth: 2))
                         
                         TextField("State", text: $state, prompt: Text("State").foregroundColor(.black))
                             .padding()
                             .background(Color.gray.opacity(0.2))
                             .cornerRadius(5)
-                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.orange, lineWidth: 2))
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color("secondColor"), lineWidth: 2))
 
                         TextField("Zipcode", text: $zipcode, prompt: Text("Zipcode").foregroundColor(.black))
                             .padding()
                             .background(Color.gray.opacity(0.2))
                             .cornerRadius(5)
-                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.orange, lineWidth: 2))
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color("secondColor"), lineWidth: 2))
 
                             .keyboardType(.numberPad)
                             .onReceive(Just(zipcode)) { newValue in
@@ -146,12 +146,12 @@ struct SignUpView: View {
                         handleSignUp()
                     }) {
                         Text("Sign Up")
-                            .foregroundColor(.white)
+                            .foregroundStyle(Color("AccentColor"))
                             .padding()
                             .frame(width: 130, height: 40)
-                            .background(Color.blue)
+                            .background(Color("secondColor"))
                             .cornerRadius(10)
-                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.blue, lineWidth: 2))
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color("AccentColor"), lineWidth: 2))
                     }
                 }
             }

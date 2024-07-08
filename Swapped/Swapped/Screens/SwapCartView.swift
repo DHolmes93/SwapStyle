@@ -49,6 +49,10 @@ struct SwapCartView: View {
                         }
                     }
                 }
+                .onAppear {
+                    swapCart.fetchCartItems()
+                }
+                
                 Button(action: {
                     swapCart.clearCart()
                 }) {

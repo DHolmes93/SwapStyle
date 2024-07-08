@@ -10,10 +10,14 @@ import SwiftUI
 struct SignInView: View {
     @State private var email = ""
     @State private var password = ""
+    @State private var showError: Bool = false
+    @State private var errorMessage: String = ""
+   @State private var shakeEffect = false
     @State private var isSignedIn = false
-    @StateObject private var authManager = AuthManager.shared
     @State private var offset: CGFloat = 0
     @State private var isKeyboardVisible = false
+    
+    @StateObject private var authManager = AuthManager.shared
     
     var body: some View {
         NavigationStack {
@@ -22,23 +26,23 @@ struct SignInView: View {
             } else {
                 
                     ZStack {
-                        Color.purple.edgesIgnoringSafeArea(.all)
+                        Color("mainColor").edgesIgnoringSafeArea(.all)
                         RoundedRectangle(cornerRadius: 30, style: .continuous)
-                            .foregroundStyle(.linearGradient(colors: [.green], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .foregroundStyle(.linearGradient(colors: [Color("secondColor")], startPoint: .topLeading, endPoint: .bottomTrailing))
                             .frame(width: 1000, height: 400)
                             .rotationEffect(.degrees(145))
                             .offset(y: -350)
                         Spacer()
                         Rectangle()
-                            .fill(Color.yellow)
+                            .fill(Color("AccentColor"))
                             .frame(width: 5, height: 700)
                             .rotationEffect(.degrees(55))
                             .offset(y: -105)
                         
                         VStack(spacing: 20) {
-                            
                             Text("                            ")
                                 .scrambleEffect(text: "Swap It Out")
+                                .foregroundStyle(Color("mainColor"))
                                 .font(.system(size: 40, weight: .bold))
                                 .padding(.top, 50)
                             
@@ -51,7 +55,7 @@ struct SignInView: View {
                                     .background(Color.clear.opacity(0.8))
                                     .cornerRadius(8)
                                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 2))
-                                    
+                                    .modifier(ShakeEffect(shakes: shakeEffect ? 2 : 0))
                                 
                                 
                                 
@@ -61,6 +65,7 @@ struct SignInView: View {
                                     .background(Color.clear.opacity(0.9))
                                     .cornerRadius(8)
                                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 2))
+                                    .modifier(ShakeEffect(shakes: shakeEffect ? 2 : 0))
                                 
                             }
                             .frame(width: 350)
@@ -73,20 +78,28 @@ struct SignInView: View {
                                     switch result {
                                     case .success:
                                         isSignedIn = true
+                                        errorMessage = ""
                                     case .failure(let error):
+                                        shakeEffect = true
+                                    
+                                        password = ""
+                                        errorMessage = "Incorrect email or password"
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                            shakeEffect = false
+                                        }
                                         print("Error signing in: \(error.localizedDescription)")
                                     }
                                     
                                 }
                             }) {
                                 Text("Sign In")
-                                    .foregroundColor(.white)
+                                    .foregroundStyle(Color("AccentColor"))
                                     .padding()
                                     .frame(width: 130, height: 40)
-                                    .background(Color.orange)
+                                    .background(Color("secondColor"))
                                     .cornerRadius(10)
                                     .overlay(RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.blue, lineWidth: 2))
+                                        .stroke(Color("AccentColor"), lineWidth: 2))
                             }
                             Spacer()
                             
@@ -137,6 +150,23 @@ struct SignInView: View {
             }
             
         }
+    struct ShakeEffect: GeometryEffect {
+        var amount: CGFloat = 10
+        var shakesPerUnit = 3
+        var shakes: Int
+        
+        var animatableData: CGFloat {
+            get { CGFloat(shakes) }
+            set { shakes = Int(newValue) }
+        }
+        
+        func effectValue(size: CGSize) -> ProjectionTransform {
+            ProjectionTransform(CGAffineTransform(translationX:
+                amount * sin(CGFloat(shakes) * .pi * CGFloat(shakesPerUnit)),
+                y: 0))
+        }
+    }
+
         
     }
 

@@ -25,6 +25,7 @@ class UserAccountModel: ObservableObject {
     
     private let authManager = AuthManager.shared
     
+    
     init() {
         
         if let currentUser = Auth.auth().currentUser {
