@@ -40,11 +40,14 @@ struct SignInView: View {
                             .offset(y: -105)
                         
                         VStack(spacing: 20) {
-                            Text("                            ")
-                                .scrambleEffect(text: "Swap It Out")
+                            Spacer()
+                            Text("                                    ")
+                                .scrambleEffect(text: "Just Swap")
                                 .foregroundStyle(Color("mainColor"))
                                 .font(.system(size: 40, weight: .bold))
-                                .padding(.top, 50)
+                                .padding(.top, 100)
+                                .padding(.bottom, 50)
+                                
                             
                             Spacer()
                             VStack(spacing: 20) {
@@ -173,41 +176,3 @@ struct SignInView: View {
 #Preview {
     SignInView()
 }
-
-
-//extension View {
-//    func textFieldModifier() -> some View {
-//        self
-//            .textFieldStyle(PlainTextFieldStyle())
-//            .overlay(
-//                HStack {
-//                    Spacer()
-//                    Button(action: {
-//                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-//                    }) {
-//                        Image(systemName: "xmark.circle.fill")
-//                            .foregroundColor(.gray)
-//                    }
-//                    .padding(.trailing, 8)
-//                })
-//    }
-//}
-
-
-
-//                                .padding(.bottom, 20)
-//                                .hidden()
-
-
-
-//                            .position(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height - 50)
-
-
-
-
-
-
-
-
-
-

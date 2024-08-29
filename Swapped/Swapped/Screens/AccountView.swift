@@ -10,15 +10,18 @@ import PhotosUI
 
 struct AccountView: View {
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var itemManager: ItemManager
     @StateObject private var viewModel = UserAccountModel()
     @State private var isImagePickerPresented = false
+    @State private var showImageSourceDialog = false
+    @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
 
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
                 Button(action: {
-                    isImagePickerPresented.toggle()
+                    showImageSourceDialog.toggle()
                 }) {
                     if let profileImage = viewModel.profileImage {
                         Image(uiImage: profileImage)
@@ -34,8 +37,20 @@ struct AccountView: View {
                             .foregroundColor(.gray)
                     }
                 }
+                .confirmationDialog("Select Image Source", isPresented: $showImageSourceDialog, titleVisibility: .visible) {
+                    Button("Camera") {
+                        sourceType = .camera
+                        isImagePickerPresented.toggle()
+                    }
+                    Button("Photo Library") {
+                        sourceType = .photoLibrary
+                        isImagePickerPresented.toggle()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                    
+                }
                 .sheet(isPresented: $isImagePickerPresented) {
-                    ImagePicker(image: $viewModel.profileImage, images: .constant([]), selectionLimit: 1)
+                    ImagePicker(image: $viewModel.profileImage, images: .constant([]), selectionLimit: 1, sourceType: sourceType)
                     
                 }
                 TextField("Name", text: $viewModel.name)
@@ -58,6 +73,8 @@ struct AccountView: View {
                 TextField("Zipcode", text: $viewModel.zipcode)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding(.horizontal)
+                Text("Rating: \(viewModel.rating, specifier: "%.1f")")
+                    .padding()
                 
                 Button(action: {
                     viewModel.saveUserDetails()
@@ -78,6 +95,22 @@ struct AccountView: View {
                         .foregroundColor(.white)
                         .cornerRadius(8)
                 }
+                Divider()
+                Text("My Items")
+                    .font(.headline)
+                List(itemManager.items) { item in
+                    Text(item.name)
+                }
+                .onAppear {
+                    itemManager.fetchItems { result in
+                        switch result {
+                        case .success(let items):
+                            itemManager.items = items
+                        case .failure(let error):
+                            print("Error fetching items: \(error.localizedDescription)")
+                        }
+                    }
+                }
             }
             .padding()
             .navigationTitle("User Account")
@@ -90,6 +123,12 @@ struct AccountView: View {
                     }
                 }}
         }
+    }
+    private func makePickerConfiguration(source: UIImagePickerController.SourceType) -> PHPickerConfiguration {
+        var config = PHPickerConfiguration()
+        config.selectionLimit = 1
+        config.filter = .images
+        return config
     }
 }
 

@@ -198,32 +198,3 @@ struct SignUpView: View {
 #Preview {
     SignUpView()
     }
-
-    
-//struct SignUpView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        SignUpView()
-//    }
-//}
-
-
-
-
-
-
-//struct DiagnalSplitView: View {
-//    let color: Color
-//
-//    var body: some View {
-//        GeometryReader { geometry in
-//            Path { path in
-//                path.move(to: CGPoint(x: 0, y: 0))
-//                path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height))
-//                path.addLine(to: CGPoint(x:geometry.size.width, y: geometry.size.height))
-//
-//            }
-//            .fill(self.color)
-//            .edgesIgnoringSafeArea(.all)
-//        }
-//    }
-//}

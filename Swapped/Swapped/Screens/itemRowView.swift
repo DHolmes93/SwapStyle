@@ -9,6 +9,7 @@ import SwiftUI
 import SDWebImageSwiftUI
 
 struct itemRowView: View {
+    @EnvironmentObject private var itemManager: ItemManager
     let item: Item
     var body: some View {
         HStack {
@@ -23,21 +24,29 @@ struct itemRowView: View {
                     .font(.headline)
                 Text(item.details)
                     .font(.headline)
-                Text(String(format: "%.2f", item.price))
+                Text(String(format: "%.2f", item.originalprice))
             }
             Spacer()
+            NavigationLink(destination: EditItemView(item: item)) {
+                Text("Edit")
+                    .foregroundStyle(Color.blue)
+                    .padding(.horizontal)
+                    .padding(.vertical, 6)
+                    .cornerRadius(8)
+            }
         }
         .padding()
     }
 }
+                           
 
 #Preview {
     itemRowView(item: Item(name: "Sports Fishing Rod",
                            details: "40ft Fishing Rod",
-                           price: 30,
+                           originalprice: 30,
+                           value: 15,
                            imageUrls: ["https://via.placeholder.com/150", "https://via.placeholder.com/150"],
                            condition: "New",
-                           description: "",
                            timestamp: Date(),
                            uid: "testUID",
                            category: "Sports",

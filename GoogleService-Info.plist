@@ -4,27 +4,51 @@
 <dict>
 	<key>API_KEY</key>
 	<string>AIzaSyDeJBx1l0A597QMY_gry-26fjvg1jlqcjs</string>
-	<key>GCM_SENDER_ID</key>
-	<string>55699318961</string>
-	<key>PLIST_VERSION</key>
-	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>blackinnovators.Swapped</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string></string>
+			<key>CFBundleURLSchemes</key>
+			<array/>
+		</dict>
+		<dict/>
+		<dict/>
+		<dict/>
+	</array>
+	<key>GCM_SENDER_ID</key>
+	<string>55699318961</string>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:55699318961:ios:d957846ee8c328e39f1a90</string>
+	<key>IS_ADS_ENABLED</key>
+	<false/>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false/>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true/>
+	<key>IS_GCM_ENABLED</key>
+	<true/>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true/>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
 	<key>PROJECT_ID</key>
 	<string>swapped-3a60e</string>
 	<key>STORAGE_BUCKET</key>
 	<string>swapped-3a60e.appspot.com</string>
-	<key>IS_ADS_ENABLED</key>
-	<false></false>
-	<key>IS_ANALYTICS_ENABLED</key>
-	<false></false>
-	<key>IS_APPINVITE_ENABLED</key>
-	<true></true>
-	<key>IS_GCM_ENABLED</key>
-	<true></true>
-	<key>IS_SIGNIN_ENABLED</key>
-	<true></true>
-	<key>GOOGLE_APP_ID</key>
-	<string>1:55699318961:ios:d957846ee8c328e39f1a90</string>
+    <key>NSCameraUsageDescription</key>
+    <string>We need your permission to use the camera</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>We need your permission to access the photo library</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>We need your permission to add photos to the library</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>We need your location to provide better service.</string>
+    <key>NSMotionUsageDescription</key>
+    <string>We use motion data to enhance the user experience by providing interactive and dynamic content.</string>
 </dict>
 </plist>

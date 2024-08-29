@@ -34,7 +34,7 @@ struct ItemCategoryView: View {
             
             Text(item.name)
                 .font(.headline)
-            Text("Price: $\(item.price, specifier: "%.2f")")
+            Text("Original Price: $\(item.originalprice, specifier: "%.2f")")
                 .font(.subheadline)
             Text("Condition: \(item.condition)")
                 .font(.subheadline)
@@ -49,10 +49,10 @@ struct ItemCategoryView: View {
     let mockItem = Item(
                 name: "Sample Item",
                 details: "Sample details",
-                price: 120.0,
+                originalprice: 120.0,
+                value: 84,
                 imageUrls: ["https://via.placeholder.com/150"],
                 condition: "Good",
-                description: "This is a sample description of the item.",
                 timestamp: Date(),
                 uid: "45768403j",
                 category: "Sports"

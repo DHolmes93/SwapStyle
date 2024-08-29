@@ -81,7 +81,7 @@ class AuthManager: ObservableObject {
     
             }
 
-struct User {
+struct User: Identifiable, Codable {
     var id: String
     var name: String
     var email: String

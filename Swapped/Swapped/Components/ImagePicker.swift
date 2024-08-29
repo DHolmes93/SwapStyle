@@ -13,9 +13,20 @@ struct ImagePicker: UIViewControllerRepresentable {
     @Binding var image: UIImage?
     @Binding var images: [UIImage]
     var selectionLimit: Int
-  
+    var sourceType: UIImagePickerController.SourceType = .photoLibrary
+    @Environment(\.presentationMode) private var presentationMode
     
-    func makeUIViewController(context: Context) ->  PHPickerViewController {
+    
+    func makeUIViewController(context: Context) -> UIViewController {
+        if sourceType == .camera {
+                    return makeUIImagePickerController(context: context)
+                } else {
+                    return makePHPickerViewController(context: context)
+                }
+    }
+    func updateUIViewController(_ uiViewController: UIViewControllerType, context: Context) {}
+    
+    private func makePHPickerViewController(context: Context) -> PHPickerViewController {
         var configuration = PHPickerConfiguration()
         configuration.selectionLimit = selectionLimit
         configuration.filter = .images
@@ -24,22 +35,30 @@ struct ImagePicker: UIViewControllerRepresentable {
         let picker = PHPickerViewController(configuration: configuration)
         picker.delegate = context.coordinator
         return picker
+        
     }
-    func updateUIViewController(_ uiViewController: UIViewControllerType, context: Context) {}
+    
+    private func makeUIImagePickerController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+   
     
     func makeCoordinator() -> Coordinator {
-        Coordinator(self)
+        Coordinator(parent: self)
     }
-    class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        let parent: ImagePicker
+    class Coordinator: NSObject, PHPickerViewControllerDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        var parent: ImagePicker
         
-        init(_ parent: ImagePicker) {
+        init(parent: ImagePicker) {
             self.parent = parent
         }
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
             picker.dismiss(animated: true)
             let group = DispatchGroup()
-           
+            
             
             var uiImages: [UIImage] = []
             for result in results {
@@ -52,11 +71,11 @@ struct ImagePicker: UIViewControllerRepresentable {
                         }
                         group.leave()
                     }
-                            
+                    
                 } else {
                     group.leave()
-                    }
                 }
+            }
             group.notify(queue: .main) {
                 if self.parent.selectionLimit == 1 {
                     self.parent.image = uiImages.first
@@ -65,6 +84,18 @@ struct ImagePicker: UIViewControllerRepresentable {
                 }
             }
         }
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            picker.dismiss(animated: true)
+            if let uiImage = info[.originalImage] as? UIImage {
+                if self.parent.selectionLimit == 1 {
+                    self.parent.image = uiImage
+                } else {
+                    self.parent.images.append(uiImage)
+                }
+            }
+        }
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
+        }
     }
 }
- 

@@ -6,61 +6,104 @@
 //
 
 import SwiftUI
+import FirebaseFirestore
+
+struct IdentifiableURL: Identifiable {
+    let id = UUID()
+    let url: URL
+}
 
 struct ItemView: View {
     let item: Item
     @State private var animateSwap = false
     @State private var addedToCart = false
     @State private var showPossibleSwap = false
+    @State private var askToSwapPressed = false
+    @State private var showCurrentUserItems = false
     @EnvironmentObject private var swapCart: SwapCart
     @EnvironmentObject private var itemManager: ItemManager
     @Environment(\.presentationMode) var presentationMode
+    @State private var fullScreenImage: IdentifiableURL?
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+    @State private var userAccount: UserAccountModel?
     
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 10) {
-                ScrollView(.horizontal) {
-                    HStack(alignment: .center, spacing: 12) {
-                        ForEach(item.imageUrls, id: \.self) { imageUrl in
-                            AsyncImage(url: URL(string: imageUrl)) { image in
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                            } placeholder: {
-                                ProgressView()
+                ZStack(alignment: .topTrailing) {
+                    ScrollView(.horizontal) {
+                        HStack(alignment: .center, spacing: 12) {
+                            ForEach(item.imageUrls, id: \.self) { imageUrl in
+                                AsyncImage(url: URL(string: imageUrl)) { phase in
+                                    switch phase {
+                                    case .empty:
+                                        ProgressView()
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(maxWidth: 1000, maxHeight: 1000)
+                                            .cornerRadius(10)
+                                            .onTapGesture {
+                                                if let url = URL(string: imageUrl) {
+                                                    fullScreenImage = IdentifiableURL(url: url)
+                                                }
+                                            }
+                                    case .failure:
+                                        Text("Failed to load")
+                                            .foregroundStyle(Color.red)
+                                    @unknown default:
+                                        EmptyView()
+                                    }
+                                }
                             }
-                            .frame(maxHeight: 400)
-                            .cornerRadius(10)
                         }
+                        .offset(x: 70)
                     }
+                    .padding(.horizontal)
+            
+                    Button(action: {
+                        addToCart(swapCart: SwapCart.shared)
+                    }) {
+                        Image(systemName: "cart.badge.plus")
+                            .font(Font.system(size: 30, weight: .bold))
+                            .foregroundStyle(Color("secondColor"))
+                            .padding()
+                            .cornerRadius(5)
+//
+                    }
+                    .offset(x: -300, y: 140)
+                    .padding()
                 }
-                .padding(.horizontal)
                 Text("Product Owner: \(item.userName ?? "Unknown User")")
-                Text(item.name)
-                    .font(.headline)
-                Text("Condition: \(item.condition)")
-                    .font(.subheadline)
-                Text("Price: $\(item.price, specifier: "%.2f")")
-                    .font(.subheadline)
-                Text("Category: \(item.category)")
-                    .font(.subheadline)
+                        .offset(x: 100)
+                    Text(item.name)
+                        .font(.headline)
+                        .offset(x: 100)
+                    Text("Condition: \(item.condition)")
+                        .font(.subheadline)
+                        .offset(x: 100)
+                    Text("Original Price: $\(item.originalprice, specifier: "%.2f")")
+                        .font(.subheadline)
+                        .offset(x: 100)
+                    Text("Category: \(item.category)")
+                        .font(.subheadline)
+                        .offset(x: 100)
+                
                 GeometryReader { geometry in
                     VStack {
-                        Text("Description: \(item.description)")
-                            .font(.body)
-                            .foregroundColor(.gray)
-                        
-                        if isPossibleSwapMatch(for: item, swapCart: SwapCart.shared) {
+                        if showPossibleSwap && isPossibleSwapMatch(for: item, swapCart: SwapCart.shared) {
                             Text("Swap Possible")
                                 .font(.largeTitle)
-                                .foregroundColor(.green)
+                                .foregroundStyle(Color("mainColor"))
                                 .scaleEffect(animateSwap ? 1.5 : 1.0)
                                 .animation(
                                     Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true))
                                 .onAppear {
                                     self.animateSwap = true
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-                                        self.showPossibleSwap = false
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                                        self.animateSwap = false
                                     }
                                 }
                                 .offset(x: min(geometry.size.width, 20), y: geometry.size.height - 20)
@@ -71,21 +114,26 @@ struct ItemView: View {
                 }
                 .frame(height: /*@START_MENU_TOKEN@*/100/*@END_MENU_TOKEN@*/)
                 HStack(spacing: 90) {
+//                    if let userAccount = userAccount {
+                        NavigationLink(destination: MessagingScreenView(currentUserId: "currentUserId", otherUserId: item.uid, chatId: "\(item.uid)_chat")) {
+                            Text("Send Message")
+                                .foregroundStyle(Color("mainColor"))
+                                .padding()
+                                .background(Color("secondColor"))
+                                .cornerRadius(5)
+                        }
+                    
                     Button(action: {
-                        addToCart(swapCart: SwapCart.shared)
+                        showCurrentUserItems = true
                     }) {
-                        Text(addedToCart ? "Added" : "Add to Cart")
-                            .foregroundColor(.black)
+                        Text("Ask To Swap")
+                            .foregroundStyle(Color("mainColor"))
                             .padding()
-                            .background(Color.red)
+                            .background(Color("secondColor"))
                             .cornerRadius(5)
                     }
-                    NavigationLink(destination: MessagingScreenView(currentUserId: "currentUserId", otherUserId: item.uid, chatId: "\(item.uid)_chat")) {
-                        Text("Send Message")
-                            .foregroundColor(.black)
-                            .padding()
-                            .background(Color.blue)
-                            .cornerRadius(5)
+                    .sheet(isPresented: $showCurrentUserItems) {
+                        CurrentUserItemsView(itemToSwap: item)
                     }
                 }
             }
@@ -94,6 +142,7 @@ struct ItemView: View {
         }
         .onAppear {
             determinePossibleSwap()
+            fetchUserAccount(for: item.uid)
         }
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -101,7 +150,33 @@ struct ItemView: View {
                 backButton
             }
         }
+        .fullScreenCover(item: $fullScreenImage) { identifiableURL in
+            AsyncImage(url: identifiableURL.url) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .edgesIgnoringSafeArea(/*@START_MENU_TOKEN@*/.all/*@END_MENU_TOKEN@*/)
+                    case .failure:
+                        Text("Failed to load")
+                            .foregroundStyle(Color.red)
+                    @unknown default:
+                        EmptyView()
+                    }
+            }
+                .onTapGesture {
+                    fullScreenImage = nil
+                }
+        }
+        .alert(isPresented: $showAlert) {
+            Alert(title: Text("Swap Request"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
+        }
     }
+       
+
     private var backButton: some View {
         Button(action: {
             presentationMode.wrappedValue.dismiss()
@@ -128,16 +203,19 @@ struct ItemView: View {
                     }
                 }
             }
-            
         }
     private func addToCart(swapCart: SwapCart) {
         swapCart.addItem(item)
         addedToCart = true
     }
+    private func showAlert(message: String) {
+            self.alertMessage = message
+            self.showAlert = true
+        }
     
     func isPossibleSwapMatch(for item: Item, swapCart: SwapCart) -> Bool {
         for cartItem in swapCart.items {
-            let priceDifference = abs(item.price - cartItem.price)
+            let priceDifference = abs(item.value - cartItem.value)
             if item.condition == cartItem.condition && priceDifference <= 20.0 {
                 return true
             }
@@ -145,31 +223,52 @@ struct ItemView: View {
         return false
     }
     private func determinePossibleSwap() {
-        if itemManager.items.contains(where: { $0.id == item.id}) {
+        if ItemManager.shared.items.contains(where: { $0.id == item.id}) || item.userName == "currentUserName" {
             showPossibleSwap = false
         } else {
             showPossibleSwap = true
         }
     }
+    private func fetchUserAccount(for uid: String) {
+            Firestore.firestore().collection("users").document(uid).getDocument { document, error in
+                if let document = document, document.exists {
+                    let data = document.data()
+                    let name = data?["name"] as? String ?? "Unknown"
+                    let profilePictureURL = data?["profilePictureURL"] as? String ?? ""
+                    self.userAccount = UserAccountModel()
+                }
+            }
+        }
 }
 
-
 #Preview {
-    let mockItem = Item(
+    let mockItem1 = Item(
                 name: "Sample Item",
                 details: "Sample details",
-                price: 120.0,
+                originalprice: 120.0,
+                value:80,
                 imageUrls: ["https://via.placeholder.com/150", "https://via.placeholder.com/150"],
                 condition: "Good",
-                description: "This is a sample description of the item.",
                 timestamp: Date(),
                 uid: "45768403j",
                 category: "Sports"
             )
+    
+        let mockItem2 = Item(
+            name: "Sample Item 2",
+            details: "Sample details",
+            originalprice: 80.0,
+            value: 66.0,
+            imageUrls: ["https://via.placeholder.com/150", "https://via.placeholder.com/150"],
+            condition: "Good",
+            timestamp: Date(),
+            uid: "45768403j",
+            category: "Electronics"
+        )
     let cart = SwapCart.shared
     let itemManager = ItemManager.shared
     return NavigationStack {
-        ItemView(item: mockItem)
+        ItemView(item: mockItem1)
             .environmentObject(cart)
             .environmentObject(itemManager)
     }

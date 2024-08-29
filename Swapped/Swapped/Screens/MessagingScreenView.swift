@@ -10,22 +10,22 @@ import FirebaseFirestoreSwift
 import FirebaseFirestore
 
 struct MessagingScreenView: View {
-    @State private var messages: [Message] = []
+    @EnvironmentObject private var userAccountModel: UserAccountModel
+    @State private var messageManager = MessageManager()
     @State private var newMessage = ""
     
     let currentUserId: String
     let otherUserId: String
     let chatId: String
-    @State private var userName: String? = nil
+    @State private var otherUserName: String = ""
+//    let userAccount: UserAccountModel
     var body: some View {
         VStack {
-            if let userName = userName {
-                Text("To: \(userName)")
+            Text("To: \(otherUserName)")
                     .font(.headline)
                     .padding()
-            }
             ScrollView {
-                ForEach(messages) { message in
+                ForEach(messageManager.messages) { message in
                     HStack {
                         if message.senderId == currentUserId {
                             Spacer()
@@ -52,62 +52,30 @@ struct MessagingScreenView: View {
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .frame(minHeight: CGFloat(30))
                 
-                Button(action: sendMessage) {
+                Button(action: {
+                    userAccountModel.fetchName(userId: otherUserId) { otherUserName in
+                        messageManager.sendMessage(chatId: chatId, currentUserId: currentUserId, otherUserId: otherUserId, content: newMessage)
+                        newMessage = ""
+                    }
+                }) {
                     Text("Send")
                 }
             }
             .padding()
         }
-        .onAppear(perform: fetchMessages)
-        .onAppear(perform: fetchUserName)
-    }
-    
-    func fetchMessages() {
-        let db = Firestore.firestore()
-        db.collection("users").document(currentUserId).collection("chats").document(chatId).collection("messages")
-            .order(by: "timestamp")
-            .addSnapshotListener { snapshot, error in
-                guard let documents = snapshot?.documents else {
-                    print("No documents")
-                    return
-                }
-                self.messages = documents.compactMap { document -> Message? in try? document.data(as: Message.self)
+        .onAppear {
+            messageManager.fetchMessages(chatId: chatId, currentUserId: currentUserId, otherUserId: otherUserId)
+            userAccountModel.fetchName(userId: otherUserId) { name in
+                otherUserName = name
             }
-    }
-}
-func sendMessage() {
-    guard !newMessage.isEmpty else { return }
-    let db = Firestore.firestore()
-    let message = Message(senderId: currentUserId, receiverId: otherUserId, content: newMessage, timestamp: Timestamp())
-    do {
-        _ = try db.collection("users").document(currentUserId).collection("chats").document(chatId).collection("messages").addDocument(from: message)
-        _ = try db.collection("users").document(otherUserId).collection("chats").document(chatId).collection("messages").addDocument(from: message)
-        newMessage = ""
-    } catch {
-        print("Error adding message: \(error)")
-    }
-    
-}
-    func fetchUserName() {
-        let db = Firestore.firestore()
-        db.collection("users").document(otherUserId).getDocument { document, error in
-            if let document = document, document.exists {
-                self.userName = document.data()?["name"] as? String
-            } else {
-                print("Document does not exist")
-            }
+        }
+        .onDisappear {
+            messageManager.stopListening()
         }
     }
 }
 
 
-struct Message: Identifiable, Codable {
-    @DocumentID var id: String?
-    var senderId: String
-    var receiverId: String
-    var content: String
-    var timestamp: Timestamp
-}
 
 #Preview {
     MessagingScreenView(currentUserId: "user2", otherUserId: "user1", chatId: "chat1")

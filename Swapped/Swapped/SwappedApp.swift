@@ -8,6 +8,7 @@
 import SwiftUI
 import UIKit
 import Firebase
+import CoreLocation
 
 
 
@@ -27,18 +28,20 @@ struct SwappedApp: App {
     @StateObject private var authManager = AuthManager.shared
     @StateObject private var swapCart = SwapCart.shared
     @StateObject private var categoryManager = CategoryManager.shared
+    @StateObject private var itemManager = ItemManager.shared
+    @StateObject private var locationManager = LocationManager.shared
+    @StateObject private var viewModel = UserAccountModel()
         @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
         
     var body: some Scene {
         WindowGroup {
-            if authManager.isSignedIn {
-                MainView()
+            ContentView()
                     .environmentObject(authManager)
                     .environmentObject(swapCart)
                     .environmentObject(categoryManager)
-            } else {
-                SignInView().environmentObject(authManager)
-            }
+                    .environmentObject(itemManager)
+                    .environmentObject(locationManager)
+                    .environmentObject(viewModel)
         }
     }
 }

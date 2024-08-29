@@ -34,6 +34,10 @@ class SwapCart: ObservableObject {
         items.removeAll()
         clearCartInFirestore()
     }
+    func fetchCart() {
+        fetchCartItems()
+        
+    }
     private func saveItemToFirestore(_ item: Item) {
         guard let uid = Auth.auth().currentUser?.uid else {
             print("No user logged in")
@@ -45,9 +49,9 @@ class SwapCart: ObservableObject {
             "uid": uid,
             "name": item.name,
             "details": item.details,
-            "price": item.price,
+            "originalprice": item.originalprice,
+            "value": item.value,
             "condition": item.condition,
-            "description": item.description,
             "timestamp": Timestamp(date: item.timestamp),
             "category": item.category,
             "imageUrls": item.imageUrls,
@@ -104,7 +108,7 @@ class SwapCart: ObservableObject {
             }
         }
     }
-    func fetchCartItems() {
+    private func fetchCartItems() {
         guard let uid = Auth.auth().currentUser?.uid else {
             print("No user logged in")
             return
@@ -121,7 +125,9 @@ class SwapCart: ObservableObject {
                 return
             }
             self.items = documents.compactMap { document in
-                try? document.data(as: Item.self)
+                var item = try? document.data(as: Item.self)
+                item?.id = document.documentID
+                return item
             }
         }
     }
