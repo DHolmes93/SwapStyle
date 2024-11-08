@@ -41,42 +41,50 @@ struct SuccessfulSwapView: View {
                     .foregroundStyle(Color.blue)
             }
             .padding()
-            .background(NavigationLink(destination: SubmitReviewView(fromUserId: fromUserId, toUserId: toUserId, userAccountModel: UserAccountModel()),
-                                       isActive: $navigateToReview
-                                      ) {
-                EmptyView()
-            }
-                        )
+            .background(
+                NavigationLink(value: navigateToReview) {
+                    EmptyView()
+                }
+                .navigationDestination(isPresented: $navigateToReview) {
+                    SubmitReviewView(fromUserId: fromUserId, toUserId: toUserId, userAccountModel: UserAccountModel(authManager: AuthManager())) // Your destination view
+                }
+            )
         }
     }
 }
 
-#Preview {
-    SuccessfulSwapView(
-fromItem: Item(
-            name: "Sample Item 1",
-            details: "Sample details 1",
-            originalprice: 100.0,
-            value: 80.0,
-            imageUrls: ["https://via.placeholder.com/150"],
-            condition: "New",
-            timestamp: Date(),
-            uid: "uid1",
-            category: "Electronics"
-        ),
-        toItem: Item(
-            name: "Sample Item 2",
-            details: "Sample details 2",
-            originalprice: 200.0,
-            value: 150.0,
-            imageUrls: ["https://via.placeholder.com/150"],
-            condition: "Used",
-            timestamp: Date(),
-            uid: "uid2",
-            category: "Furniture"
-        ),
-        fromUserId: "user1",
-        toUserId: "user2",
-userAccountmodel: UserAccountModel()
-    )
-}
+//#Preview {
+//    SuccessfulSwapView(
+//fromItem: Item(
+//            name: "Sample Item 1",
+//            details: "Sample details 1",
+//            originalprice: 100.0,
+//            value: 80.0,
+//            imageUrls: ["https://via.placeholder.com/150"],
+//            condition: "New",
+//            timestamp: Date(),
+//            uid: "uid1",
+//            category: "Electronics", subcategory: "Tablet",
+//            userName: "Flower Pot",
+//            latitude: 0.0,
+//            longitude: 0.0
+//        ),
+//        toItem: Item(
+//            name: "Sample Item 2",
+//            details: "Sample details 2",
+//            originalprice: 200.0,
+//            value: 150.0,
+//            imageUrls: ["https://via.placeholder.com/150"],
+//            condition: "Used",
+//            timestamp: Date(),
+//            uid: "uid2",
+//            category: "Furniture", subcategory: "Sofa",
+//            userName: "Flower Pot",
+//            latitude: 0.0,
+//            longitude: 0.0
+//        ),
+//        fromUserId: "user1",
+//        toUserId: "user2",
+//userAccountmodel: UserAccountModel(authManager: AuthManager())
+//    )
+//}

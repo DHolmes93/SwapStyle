@@ -3,22 +3,18 @@
 //  Swapped
 //
 //  Created by Donovan Holmes on 7/2/24.
-//
-
 import Foundation
-
 import Firebase
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 import FirebaseStorage
 import FirebaseAuth
 import CoreLocation
+import SwiftUICore
 
-
-// Manages items and related operations, such as uploading, deleting, fetching, swapping items and sorting them by location.
 class ItemManager: ObservableObject {
     static let shared = ItemManager()
-    @Published var items: [Item] = [] // List of all items for the current user
+    @Published var items: [Item] = []
     @Published var itemsByDistance: [String: [Item]] = [
         "5km": [],
         "15km": [],
@@ -26,342 +22,245 @@ class ItemManager: ObservableObject {
         "50km+": []
     ]
     private let authManager = AuthManager.shared
-    
-    // Private initializer to enforce singleton pattern
-    private init() {}
-    
-    // Upload each image to Firebase Storage and Collect their URL's
-    func uploadItem(userAccountModel: UserAccountModel, images: [UIImage], name: String, details: String, originalprice: Double, value: Double, condition: String, timestamp: Date, category: String, completion: @escaping (Result<Void, Error>) -> Void) {
-        // Check if user is logged in
+    private let userAccountModel = UserAccountModel.shared
+    @EnvironmentObject private var locationManager: LocationManager
+    private let categoryManager = CategoryManager.shared
+    private let db = Firestore.firestore()
+    @Published var selectedCategory: Category? // assuming Category is Equatable
+    @Published var selectedSubcategory: Category? 
+
+    init() {}
+
+    func uploadItem(
+        userAccountModel: UserAccountModel,
+        images: [UIImage],
+        name: String,
+        details: String,
+        originalprice: Double,
+        value: Double,
+        condition: String,
+        timestamp: Date,
+        selectedCategory: String,
+        selectedSubCategory: String
+        
+    ) async throws {
         guard let uid = Auth.auth().currentUser?.uid else {
-            completion(.failure(NSError(domain: "No user logged in", code: 401, userInfo: nil)))
-            return
+            throw NSError(domain: "No user logged in", code: 401, userInfo: nil)
         }
-        // Reference to Firebase Storage location for item images
+
         let itemImagesRef = Storage.storage().reference().child("item_images")
-        // Emopty Array to store URLs of uploaded images
         var imageUrls: [String] = []
-        
-        
-        let dispatchGroup = DispatchGroup()
-        
-        // Loop through each image and store in firebase while also collecting their URLs
+
         for image in images {
-            dispatchGroup.enter()
             let imageName = UUID().uuidString
             let imageRef = itemImagesRef.child("\(imageName).jpg")
-            guard let imageData = image.jpegData(compressionQuality: 0.8)
-            else {
-                completion(.failure(NSError(domain: "Image Conversion Error", code: 500, userInfo: nil)))
-                return
+            guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                throw NSError(domain: "Image Conversion Error", code: 500, userInfo: nil)
             }
-            imageRef.putData(imageData, metadata: nil) { (metdadata, error) in
-                if let error = error {
-                    completion(.failure(error))
-                    return
-                }
-                imageRef.downloadURL { (url, error) in
-                    defer { dispatchGroup.leave() }
-                    if let error = error {
-                        completion(.failure(error))
-                        return
-                    }
-                    guard let imageUrl = url?.absoluteString else {
-                        completion(.failure(NSError(domain: "URL error", code: 500, userInfo: nil)))
-                        return
-                    }
-                    // Add ImageURL to array
-                    imageUrls.append(imageUrl)
-                }
-            }
+
+            try await imageRef.putDataAsync(imageData, metadata: nil)
+            let url = try await imageRef.downloadURL()
+            imageUrls.append(url.absoluteString)
         }
-        // Once all images are uploaded, save the item data in Firestore
-        dispatchGroup.notify(queue: .main) {
-            LocationManager.shared.getCurrentLocation {
-                result in
-                switch result {
-                case .success(_):
-                    let itemData: [String: Any] = [
-                        "uid": uid,
-                        "name": name,
-                        "details": details,
-                        "originalprice": originalprice,
-                        "value": value,
-                        "condition": condition,
-                        "timestamp": Timestamp(date: timestamp),
-                        "category": category,
-                        "imageUrls": imageUrls,
-                        "userName": userAccountModel.name
-                    ]
-                    let db = Firestore.firestore()
-                    db.collection("users").document(uid).collection("items").addDocument(data: itemData) { error in
-                        if let error = error {
-                            completion(.failure(error))
-                        } else {
-                            completion(.success(()))
-                        }
-                    }
-                case .failure(let error):
-                    completion(.failure(error))
-                }
-            }
-        }
+        guard !selectedCategory.isEmpty, !selectedSubCategory.isEmpty else {
+               throw NSError(domain: "Category and subcategory must not be empty", code: 400, userInfo: nil)
+           }
+        let userName = userAccountModel.name
+        let (location, _, _, _, _) = try await LocationManager.shared.getCurrentLocation()
+        let itemData: [String: Any] = [
+            "uid": uid,
+            "name": name,
+            "details": details,
+            "originalprice": originalprice,
+            "value": value,
+            "condition": condition,
+            "timestamp": Timestamp(date: timestamp),
+            "selectedCategory": selectedCategory,
+            "selectedSubCategory": selectedSubCategory,
+            "imageUrls": imageUrls,
+            "userName": userName,
+            "latitude": location.coordinate.latitude,
+            "longitude": location.coordinate.longitude
+        ]
+
+        try await db.collection("users").document(uid).collection("items").addDocument(data: itemData)
     }
-    // Deletes an item from Firestore an updates Items List of user
-    func deleteItem(itemId: String, completion: @escaping (Result<Void, Error>) -> Void) {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            completion(.failure(NSError(domain: "No user logged in", code: 401, userInfo: nil)))
-            return
-        }
-        
-        let db = Firestore.firestore()
-        db.collection("users").document(uid).collection("items").document(itemId).delete { error in
-            
-            //Handle Firestore error
-            if let error = error {
-                completion(.failure(error))
-            } else {
-                self.fetchItems { _ in }
-                completion(.success(()))
-            }
-        }
+
+    func deleteItem(itemId: String) async throws {
+        let userUid = Auth.auth().currentUser?.uid ?? ""
+        let itemRef = db.collection("users").document(userUid).collection("items").document(itemId)
+        try await itemRef.delete()
+        items.removeAll { $0.uid == itemId }
     }
-    
-    // Fetches all items for the current user from Firestore
-    func fetchItems(completion: @escaping (Result<[Item], Error>) -> Void) {
+
+    func updateItem(_ item: Item) async throws {
+        guard let userUid = Auth.auth().currentUser?.uid else { return }
+        let itemRef = db.collection("users").document(userUid).collection("items").document(item.uid)
+        try await itemRef.setData(from: item)
+    }
+
+    func fetchItems() async throws -> [Item] {
         guard let uid = Auth.auth().currentUser?.uid else {
-            completion(.failure(NSError(domain: "No user logged in", code: 401, userInfo: nil)))
-            return
+            throw NSError(domain: "No user logged in", code: 401, userInfo: nil)
         }
-        let db = Firestore.firestore()
-        // Reference to the users items collection
+
         let userItemsRef = db.collection("users").document(uid).collection("items")
-        userItemsRef.getDocuments { snapshot, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-            guard let documents = snapshot?.documents else {
-                completion(.success([]))
-                return
-            }
-            let items = documents.compactMap { document -> Item? in
-                var item = try? document.data(as: Item.self)
-                item?.id = document.documentID
-                
-                return item
-            }
-            DispatchQueue.main.async {
-                self.items = items
-                completion(.success(items))
-            }
+        let snapshot = try await userItemsRef.getDocuments()
+        let items = snapshot.documents.compactMap { document in
+            var item = try? document.data(as: Item.self)
+            item?.id = document.documentID
+            return item
         }
+
+        self.items = items
+        return items
     }
-    
-    // Sends a swap request between items of the current user and another user
-    func requestSwap(fromItemId: String, toUserId: String, toItemId: String, completion: @escaping(Result<Void, Error>) -> Void) {
+
+    func requestSwap(fromItemId: String, toUserId: String, toItemId: String) async throws {
         guard let currentUserId = Auth.auth().currentUser?.uid else {
-            completion(.failure(NSError(domain: "No user logged in", code: 401, userInfo: nil)))
-            return
+            throw NSError(domain: "No user logged in", code: 401, userInfo: nil)
         }
-        let db = Firestore.firestore()
-        let swapRequest = [
+
+        let swapRequest: [String: Any] = [
             "fromUserId": currentUserId,
-            "fromItemId": toItemId,
+            "fromItemId": fromItemId,
             "toUserId": toUserId,
             "toItemId": toItemId,
-            "status": "pending"]
-        as [String : Any]
-        
-        db.collection("swapRequests").addDocument(data: swapRequest) { error in
-            if let error = error {
-                completion(.failure(error))
-            } else {
-                completion(.success(()))
-            }
-        }
+            "status": "pending"
+        ]
+
+        try await db.collection("swapRequests").addDocument(data: swapRequest)
     }
-    
-    // Accepts a swap request and updates the staus to be accepted
-    func acceptSwapRequest(swapRequestId: String, completion: @escaping(Result<Void, Error>) -> Void) {
-        let db = Firestore.firestore()
-        let swapRequestRef = db.collection("users").document(swapRequestId)
-        swapRequestRef.getDocument { document, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-            guard let data = document?.data(),
-                  let fromUserId = data["fromUserId"] as? String,
-                  let fromItemId = data["fromItemId"] as? String,
-                  let toUserId = data["toUserId"] as? String,
-                  let toItemId = data["toItemId"] as? String else {
-                completion(.failure(NSError(domain: "Invalid Data", code: 500, userInfo: nil)))
-                return
-            }
-            self.swapItems(fromUserId: fromUserId, fromItemId: fromItemId, toUserId: toUserId, toItemId: toItemId) { result in
-                switch result {
-                case .success:
-                    swapRequestRef.updateData(["status": "accepted"]) { error in
-                        if let error = error {
-                            completion(.failure(error))
-                        } else {
-                            completion(.success(()))
-                        }
-                    }
-                case .failure(let error):
-                    completion(.failure(error))
-                }
-            }
+
+    func acceptSwapRequest(swapRequestId: String) async throws {
+        let swapRequestRef = db.collection("swapRequests").document(swapRequestId)
+        let document = try await swapRequestRef.getDocument()
+
+        guard let data = document.data(),
+              let fromUserId = data["fromUserId"] as? String,
+              let fromItemId = data["fromItemId"] as? String,
+              let toUserId = data["toUserId"] as? String,
+              let toItemId = data["toItemId"] as? String else {
+            throw NSError(domain: "Invalid Data", code: 500, userInfo: nil)
         }
+
+        try await swapItems(fromUserId: fromUserId, fromItemId: fromItemId, toUserId: toUserId, toItemId: toItemId)
+        try await swapRequestRef.updateData(["status": "accepted"])
     }
-    func swapItems(fromUserId: String, fromItemId: String, toUserId: String, toItemId: String, completion: @escaping (Result<Void, Error>) -> Void) {
-        let db = Firestore.firestore()
+
+    func swapItems(fromUserId: String, fromItemId: String, toUserId: String, toItemId: String) async throws {
         let batch = db.batch()
-        
+
         let fromItemRef = db.collection("users").document(fromUserId).collection("items").document(fromItemId)
         let toItemRef = db.collection("users").document(toUserId).collection("items").document(toItemId)
-        
+
         batch.updateData(["uid": toUserId], forDocument: fromItemRef)
         batch.updateData(["uid": fromUserId], forDocument: toItemRef)
-        batch.commit() { error in
-            if let error = error {
-                completion(.failure(error))
-            } else {
-                completion(.success(()))
-            }
-        }
-    }
-    
-    private func fetchDisplayName(for uid: String, completion: @escaping (String?) -> Void) {
-        Firestore.firestore().collection("users").document(uid).getDocument { document, error in
-            if let document = document, document.exists {
-                let displayName = document.data()?["displayName"] as? String
-                completion(displayName)
-            } else {
-                completion(nil)
-            }
-        }
-    }
-    func updateItem(_ item: Item, completion: @escaping (Result<Void, Error>) -> Void) {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            completion(.failure(NSError(domain: "No user logged in", code: 401, userInfo: nil)))
-            return
-            
-        }
-        let db = Firestore.firestore()
-        let userItemsRef = db.collection("users").document(uid).collection("items")
-        userItemsRef.document(item.id!).setData(item.toDictionary()) { error in
-            if let error = error {
-                completion(.failure(error))
-            } else {
-                self.fetchItems { _ in }
-                completion(.success(()))
-            }
-        }
-    }
-    func fetchAllItems(completion: @escaping (Result<[Item], Error>) -> Void) {
-        let db = Firestore.firestore()
-        db.collection("users").getDocuments { snapshot, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-            guard let userDocuments = snapshot?.documents else {
-                completion(.success([]))
-                return
-            }
-            let dispatchGroup = DispatchGroup()
-            var allItems: [Item] = []
-            
-            for userDocument in userDocuments {
-                let userItemsRef = db.collection("users").document(userDocument.documentID).collection("items")
-                dispatchGroup.enter()
-                userItemsRef.getDocuments { itemsSnapshot, error in
-                    if let itemsSnapshot = itemsSnapshot {
-                        let items = itemsSnapshot.documents.compactMap { document -> Item? in
-                            var item = try? document.data(as: Item.self)
-                            item?.id = document.documentID
-                            return item
-                        }
-                        allItems.append(contentsOf: items)
-                    }
-                    dispatchGroup.leave()
-                }
-            }
-            
-            dispatchGroup.notify(queue: .main) {
-                DispatchQueue.main.async {
-                    self.items = allItems
-                    completion(.success(allItems))
-                }
-            }
-        }
-    }
-    func fetchAndSortItemsByLocation(completion: @escaping (Result<[Item], Error>) -> Void) {
-        LocationManager.shared.getCurrentLocation { result in
-            switch result {
-            case .success(let userLocation):
-                self.fetchAllItems { result in
-                    switch result {
-                    case .success(let items):
-                        let sortedItems = items.sorted {
-                            guard let lat1 = $0.latitude, let lon1 = $0.longitude, let lat2 = $1.latitude, let lon2 = $1.longitude else {
-                                return false
-                            }
-                            let loc1 = CLLocation(latitude: lat1, longitude: lon1)
-                            let loc2 = CLLocation(latitude: lat2, longitude: lon2)
-                            return loc1.distance(from: userLocation) < loc2.distance(from: userLocation)
-                        }
-                        completion(.success(sortedItems))
-                    case .failure(let error):
-                        completion(.failure(error))
-                    }
-                }
-            case .failure(let error):
-                completion(.failure(error))
-            }
-        }
-    }
-    func fetchItemsByDistance(_ location: CLLocation, completion: @escaping (Result<[String: [Item]], Error>) -> Void) {
-        fetchAllItems { result in
-            switch result {
-            case .success(let allItems):
-                var itemsByDistance: [String: [Item]] = [
-                    "5km": [],
-                    "15km": [],
-                    "25km": [],
-                    "50km": []
-                ]
-                for item in allItems {
-                    guard let itemLocation = item.location else { continue }
-                    let distance = itemLocation.distance(from: location) / 1000 //Distance in Kilometers
-                    
-                    if distance <= 5 {
-                        itemsByDistance["5km"]?.append(item)
-                    } else if distance <= 15 {
-                        itemsByDistance["15km"]?.append(item)
-                    } else if distance <= 25 {
-                        itemsByDistance["25km"]?.append(item)
-                    } else {
-                        itemsByDistance["50km+"]?.append(item)
-                    }
-                }
-                DispatchQueue.main.async {
-                    self.itemsByDistance = itemsByDistance
-                    completion(.success(itemsByDistance))
-                }
-            case .failure(let error):
-                completion(.failure(error))
-            }
-        }
-    }
-    func getUsername(for itemId: String) -> String? {
-            return items.first(where: { $0.id == itemId })?.userName
-        }
-   
-    
 
+        try await batch.commit()
+    }
+
+    func fetchAllItems() async throws -> [Item] {
+        let snapshot = try await db.collectionGroup("items").getDocuments()
+        let items = snapshot.documents.compactMap { document in
+            var item = try? document.data(as: Item.self)
+            item?.id = document.documentID
+            return item
+        }
+        
+        self.items = items
+        return items
+    }
+
+    func fetchItemsByDistance() async throws -> [Item] {
+        let userLocation = try await LocationManager.shared.getCurrentLocation().0  // Use only CLLocation
+
+        let items = try await fetchAllItems()
+
+        // Sort items by distance to the user's location
+        let sortedItems = items.sorted {
+            $0.distance(to: userLocation) < $1.distance(to: userLocation)
+        }
+
+        // Optionally update internal items state if needed
+        self.items = sortedItems
+        return sortedItems
+    }
+    // In LocationManager or ItemManager, depending on where fetchItemsByDistance is implemented
+
+    func fetchItemsByKm(within radius: Double) async throws -> [Item] {
+        let (userLocation, _, _, _, _) = try await LocationManager.shared.getCurrentLocation()
+        let items = try await fetchAllItems()
+        
+        // If radius is 50 km, fetch all items without filtering by distance
+        if radius >= 50.0 {
+            return items
+        }
+
+        // Filter items within the specified radius without reverse geocoding
+        let filteredItems = items.filter { item in
+            let itemLocation = CLLocation(latitude: item.latitude, longitude: item.longitude)
+            let distanceInKm = itemLocation.distance(from: userLocation) / 1000
+            return distanceInKm <= radius
+        }
+        
+        return filteredItems
+    }
+
+
+
+
+    func fetchItemsByCategory(category: String) async throws -> [Item] {
+        let snapshot = try await db.collection("items").whereField("category", isEqualTo: category).getDocuments()
+        let items = snapshot.documents.compactMap { document in
+            try? document.data(as: Item.self)
+        }
+        return items
+    }
+
+    func fetchItemsBySubcategory(category: String, subcategory: String) async throws -> [Item] {
+        let snapshot = try await db.collection("items")
+            .whereField("category", isEqualTo: category)
+            .whereField("subcategory", isEqualTo: subcategory)
+            .getDocuments()
+        
+        let items = snapshot.documents.compactMap { document in
+            try? document.data(as: Item.self)
+        }
+        return items
+    }
+
+    func fetchItemsByCategoryAndSubcategoryAndDistance(category: String?, subcategory: String?, radius: Double?) async throws -> [Item] {
+        let (userLocation, city, state, zipcode, country) = try await LocationManager.shared.getCurrentLocation()
+        var items = try await fetchAllItems()
+
+        if let category = category {
+            items = items.filter { $0.selectedCategory == category }
+        }
+        if let subcategory = subcategory {
+            items = items.filter { $0.selectedSubCategory == subcategory }
+        }
+        if let radius = radius {
+            items = items.filter { $0.distance(to: userLocation) <= radius }
+        }
+
+        let sortedItems = items.sorted { $0.distance(to: userLocation) < $1.distance(to: userLocation) }
+        return sortedItems
+    }
+    
+    func getUsername(for itemId: String) async throws -> String {
+        let document = try await db.collection("items").document(itemId).getDocument()
+        guard let data = document.data(), let userId = data["uid"] as? String else {
+            throw NSError(domain: "Invalid Data", code: 500, userInfo: nil)
+        }
+
+        let userDoc = try await db.collection("users").document(userId).getDocument()
+        guard let userData = userDoc.data(), let username = userData["username"] as? String else {
+            throw NSError(domain: "Invalid Data", code: 500, userInfo: nil)
+        }
+        
+        return username
+    }
 }
 
 struct SwapRequest: Codable {
@@ -372,10 +271,10 @@ struct SwapRequest: Codable {
     var status: String
 }
 
-            
+
     struct Item: Identifiable, Codable {
         @DocumentID var id: String?
-        var uid: String
+            var uid: String
             var name: String
             var details: String
             var originalprice: Double
@@ -383,19 +282,24 @@ struct SwapRequest: Codable {
             var imageUrls: [String] // Handle Multiple Images
             var condition: String
             var timestamp: Date
-            var category: String
-            var userName: String?
-            var latitude: Double?
-            var longitude: Double?
-        
+            var selectedCategory: String // Changed
+            var selectedSubCategory: String?
+            var userName: String
+            var latitude: Double
+            var longitude: Double
+
+
             var location: CLLocation? {
-            guard let latitude = latitude, let longitude = longitude else { return nil }
+            
             return CLLocation(latitude: latitude, longitude: longitude)
         }
+        func distance(to location: CLLocation) -> CLLocationDistance {
+            return self.location!.distance(from: location)
+        }
         
-            
-        
-        init(name: String, details: String, originalprice: Double, value: Double, imageUrls: [String], condition: String, timestamp: Date, uid: String, category: String, userName: String? = nil, latitude: Double? = nil, longitude: Double? = nil) {
+
+
+        init(name: String, details: String, originalprice: Double, value: Double, imageUrls: [String], condition: String, timestamp: Date, uid: String, selectedCategory: String, selectedSubCategory: String?, userName: String, latitude: Double, longitude: Double) {
                 self.uid = uid
                 self.name = name
                 self.details = details
@@ -404,12 +308,13 @@ struct SwapRequest: Codable {
                 self.imageUrls = imageUrls
                 self.condition = condition
                 self.timestamp = timestamp
-                self.category = category
+                self.selectedCategory = selectedCategory // Changed
+                self.selectedSubCategory = selectedSubCategory // Changed
                 self.userName = userName
                 self.latitude = latitude
                 self.longitude = longitude
            }
-        
+
            init(from decoder: Decoder) throws {
                let container = try decoder.container(keyedBy: CodingKeys.self)
                id = try? container.decode(String.self, forKey: .id)
@@ -421,11 +326,12 @@ struct SwapRequest: Codable {
                imageUrls = try container.decodeIfPresent([String].self, forKey: .imageUrls) ?? []
                condition = try container.decodeIfPresent(String.self, forKey: .condition) ?? ""
                timestamp = try container.decodeIfPresent(Date.self, forKey: .timestamp) ?? Date()
-               category = try container.decodeIfPresent(String.self, forKey: .category) ?? ""
+               selectedCategory = try container.decodeIfPresent(String.self, forKey: .selectedCategory) ?? "" // Changed
+               selectedSubCategory = try container.decodeIfPresent(String.self, forKey: .selectedSubCategory)
                userName = try container.decodeIfPresent(String.self, forKey: .userName) ?? ""
-               latitude = try container.decodeIfPresent(Double.self, forKey: .latitude)
-               longitude = try container.decodeIfPresent(Double.self, forKey: .longitude)
-              
+               latitude = try container.decodeIfPresent(Double.self, forKey: .latitude) ?? 0.0
+               longitude = try container.decodeIfPresent(Double.self, forKey: .longitude) ?? 0.0
+
            }
         func toDictionary() -> [String: Any] {
                 return [
@@ -437,12 +343,46 @@ struct SwapRequest: Codable {
                     "imageUrls": imageUrls,
                     "condition": condition,
                     "timestamp": timestamp,
-                    "category": category,
-                    "userName": userName as Any,
-                    "latitude": latitude as Any,
-                    "longitude": longitude as Any
+                    "selectedCategory": selectedCategory as Any,
+                    "selectedSubCategory": selectedSubCategory as Any,
+                    "userName": userName,
+                    "latitude": latitude,
+                    "longitude": longitude
+                    
                 ]
             }
-            
+
         }
-        
+
+//extension Item {
+//    func distance(to location: CLLocation) -> Double {
+//        guard let itemLocation = self.location else { return Double.greatestFiniteMagnitude }
+//        return itemLocation.distance(from: location)
+//    }
+//}
+
+// Fetch items by category and distance
+//    func fetchItemsByCategoryAndDistance(category: String?, radius: Double, userLocation: CLLocation, completion: @escaping (Result<[Item], Error>) -> Void) {
+//        LocationManager.shared.getCurrentLocation { result in
+//            switch result {
+//            case .success(let (location, _, _, _)):
+//                self.fetchAllItems { fetchResult in
+//                    switch fetchResult {
+//                    case .success(let items):
+//                        // If category is nil (i.e., "All" is selected), don't filter by category
+//                        let filteredItems = category == nil ? items : items.filter { $0.category == category }
+//
+//                        // Sort by distance to the user's current location
+//                        let sortedItems = filteredItems.sorted { $0.distance(to: location) < $1.distance(to: location) }
+//
+//                        // Return the sorted items
+//                        completion(.success(sortedItems))
+//                    case .failure(let error):
+//                        completion(.failure(error))
+//                    }
+//                }
+//            case .failure(let error):
+//                completion(.failure(error))
+//            }
+//        }
+//    }

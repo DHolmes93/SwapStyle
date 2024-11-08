@@ -40,18 +40,20 @@ struct itemRowView: View {
 }
                            
 
-#Preview {
-    itemRowView(item: Item(name: "Sports Fishing Rod",
-                           details: "40ft Fishing Rod",
-                           originalprice: 30,
-                           value: 15,
-                           imageUrls: ["https://via.placeholder.com/150", "https://via.placeholder.com/150"],
-                           condition: "New",
-                           timestamp: Date(),
-                           uid: "testUID",
-                           category: "Sports",
-                           userName: "Joe"))
-        .previewLayout(.sizeThatFits)
-                           
-                         
-}
+//#Preview {
+//    itemRowView(item: Item(name: "Sports Fishing Rod",
+//                           details: "40ft Fishing Rod",
+//                           originalprice: 30,
+//                           value: 15,
+//                           imageUrls: ["https://via.placeholder.com/150", "https://via.placeholder.com/150"],
+//                           condition: "New",
+//                           timestamp: Date(),
+//                           uid: "testUID",
+//                           category: "Sports", subcategory: "Ball",
+//                           userName: "Joe",
+//                           latitude: 0.0,
+//                           longitude: 0.0))
+//        .previewLayout(.sizeThatFits)
+//                           
+//                         
+//}

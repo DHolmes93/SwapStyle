@@ -53,7 +53,7 @@ class SwapCart: ObservableObject {
             "value": item.value,
             "condition": item.condition,
             "timestamp": Timestamp(date: item.timestamp),
-            "category": item.category,
+            "category": item.selectedCategory,
             "imageUrls": item.imageUrls,
             "userName": item.userName ?? "Unknown User"
         ]

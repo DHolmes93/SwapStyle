@@ -1,0 +1,8 @@
+//
+//  Config.xcconfig
+//  Just Swap
+//
+//  Created by Donovan Holmes on 10/22/24.
+//
+GOOGLE_PLACES_API_KEY = AIzaSyBKCMrXkHDRwh4UYdGt6YaQ3_kU190e6CI
+

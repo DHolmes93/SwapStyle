@@ -3,27 +3,36 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyDeJBx1l0A597QMY_gry-26fjvg1jlqcjs</string>
+	<string>AIzaSyDv4PGnB57k3urVSI1cFgn6DubkV9hmXVA</string>
 	<key>BUNDLE_ID</key>
-	<string>blackinnovators.Swapped</string>
+	<string>blackinnovators.Just-Swap</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>CFBundleURLName</key>
-			<string></string>
 			<key>CFBundleURLSchemes</key>
-			<array/>
+			<array>
+				<string>app-1-481040594593-ios-7dd1a7627cf682363c62e0</string>
+				<string>com.googleusercontent.apps.481040594593-j2ug0rkjfsc11crmh0johpb1t9gerluk</string>
+			</array>
 		</dict>
-		<dict/>
-		<dict/>
-		<dict/>
 	</array>
+    <key>ASAuthorizationAppleIDProvider</key>
+    <dict>
+        <key>ClientId</key>
+        <string>your.service.id</string> <!-- Your service ID if applicable -->
+        <key>RedirectURI</key>
+        <string>https://just-swap-89ce8.firebaseapp.com/__/auth/handler</string> <!-- Redirect URI if applicable -->
+    </dict>
+    <key>GIDClientID</key>
+    <string>481040594593-j2ug0rkjfsc11crmh0johpb1t9gerluk.apps.googleusercontent.com</string>
+	<key>CLIENT_ID</key>
+	<string>481040594593-j2ug0rkjfsc11crmh0johpb1t9gerluk.apps.googleusercontent.com</string>
 	<key>GCM_SENDER_ID</key>
-	<string>55699318961</string>
+	<string>481040594593</string>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:55699318961:ios:d957846ee8c328e39f1a90</string>
+	<string>1:481040594593:ios:7dd1a7627cf682363c62e0</string>
 	<key>IS_ADS_ENABLED</key>
 	<false/>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -37,18 +46,19 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>PROJECT_ID</key>
-	<string>swapped-3a60e</string>
+	<string>just-swap-89ce8</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.481040594593-j2ug0rkjfsc11crmh0johpb1t9gerluk</string>
 	<key>STORAGE_BUCKET</key>
-	<string>swapped-3a60e.appspot.com</string>
-    <key>NSCameraUsageDescription</key>
-    <string>We need your permission to use the camera</string>
-    <key>NSPhotoLibraryUsageDescription</key>
-    <string>We need your permission to access the photo library</string>
-    <key>NSPhotoLibraryAddUsageDescription</key>
-    <string>We need your permission to add photos to the library</string>
+	<string>just-swap-89ce8.appspot.com</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>We need your location to provide better service.</string>
-    <key>NSMotionUsageDescription</key>
-    <string>We use motion data to enhance the user experience by providing interactive and dynamic content.</string>
+    <string>We need your location to provide place search services.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>We need your location to provide accurate suggestions.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>We need your location to improve the app experience.</string>
+    <key>NSLocationUsageDescription</key>
+    <string>We need your location to improve the app experience.</string>
+
 </dict>
 </plist>

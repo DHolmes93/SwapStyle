@@ -21,44 +21,38 @@ struct ItemCategoryView: View {
             } placeholder: {
                 ProgressView()
             }
-            .frame(width: /*@START_MENU_TOKEN@*/100/*@END_MENU_TOKEN@*/, height: 100)
+            .frame(width: 150, height: 150)
             .cornerRadius(5)
             } else {
                 Image(systemName: "photo")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: /*@START_MENU_TOKEN@*/100/*@END_MENU_TOKEN@*/, height: 100)
+                    .frame(width: 150, height: 150)
                     .cornerRadius(5)
                     .foregroundColor(.gray)
             }
-            
-            Text(item.name)
-                .font(.headline)
-            Text("Original Price: $\(item.originalprice, specifier: "%.2f")")
-                .font(.subheadline)
-            Text("Condition: \(item.condition)")
-                .font(.subheadline)
-            Text("Category: \(item.category)")
-                .font(.subheadline)
         }
         .padding()
     }
 }
 
-#Preview {
-    let mockItem = Item(
-                name: "Sample Item",
-                details: "Sample details",
-                originalprice: 120.0,
-                value: 84,
-                imageUrls: ["https://via.placeholder.com/150"],
-                condition: "Good",
-                timestamp: Date(),
-                uid: "45768403j",
-                category: "Sports"
-            )
-    
-    return ItemCategoryView(item: mockItem)
-        .previewLayout(.fixed(width: 300, height: 200))
-        .padding()
-}
+//#Preview {
+//    let mockItem = Item(
+//                name: "Sample Item",
+//                details: "Sample details",
+//                originalprice: 120.0,
+//                value: 84,
+//                imageUrls: ["https://via.placeholder.com/150"],
+//                condition: "Good",
+//                timestamp: Date(),
+//                uid: "45768403j",
+//                category: "Sports", subcategory: "Ball",
+//                userName: "Flower Pot",
+//                latitude: 0.0,
+//                longitude: 0.0
+//            )
+//    
+//    return ItemCategoryView(item: mockItem)
+//        .previewLayout(.fixed(width: 300, height: 200))
+//        .padding()
+//}

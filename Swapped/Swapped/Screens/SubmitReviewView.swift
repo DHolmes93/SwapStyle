@@ -23,23 +23,23 @@ struct SubmitReviewView: View {
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding()
             
-            Button(action: submitReview) {
-                Text("Submit")
-                    .padding()
-            }
+//            Button(action: submitReview) {
+//                Text("Submit")
+//                    .padding()
+//            }
         }
         .padding()
     }
-    private func submitReview() {
-        userAccountModel.submitReview(fromUserId: fromUserId, toUserId: toUserId, rating: rating, comment: comment) { result in
-            switch result {
-            case .success:
-                presentationMode.wrappedValue.dismiss()
-            case .failure(let error):
-                print("Failed to submit review: \(error.localizedDescription)")
-            }
-        }
-    }
+//    private func submitReview() {
+//        userAccountModel.submitReview(fromUserId: fromUserId, toUserId: toUserId, rating: rating, comment: comment) { result in
+//            switch result {
+//            case .success:
+//                presentationMode.wrappedValue.dismiss()
+//            case .failure(let error):
+//                print("Failed to submit review: \(error.localizedDescription)")
+//            }
+//        }
+//    }
 }
 struct RatingView: View {
     @Binding var rating: Double
@@ -52,12 +52,12 @@ struct RatingView: View {
                     .foregroundColor(star <= Int(rating) ? .yellow : .gray)
                     .onTapGesture {
                         rating = Double(star)
-                    }
+                }
             }
         }
     }
 }
 
 #Preview {
-    SubmitReviewView(fromUserId: "user 1", toUserId: "user 2", userAccountModel: UserAccountModel())
+    SubmitReviewView(fromUserId: "user 1", toUserId: "user 2", userAccountModel: UserAccountModel(authManager: AuthManager()))
 }

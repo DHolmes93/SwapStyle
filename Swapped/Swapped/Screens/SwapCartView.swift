@@ -75,36 +75,42 @@ struct SwapCartView: View {
     }
 }
 
-#Preview {
-    let mockItem1 = Item(
-            name: "Sample Item",
-            details: "Sample details",
-            originalprice: 120.0,
-            value: 80.0,
-            imageUrls: ["https://via.placeholder.com/150", "https://via.placeholder.com/150"],
-            condition: "Good",
-            timestamp: Date(),
-            uid: "45768403j",
-            category: "Sports"
-        )
-
-        let mockItem2 = Item(
-            name: "Sample Item 2",
-            details: "Sample details",
-            originalprice: 80.0,
-            value: 66.0,
-            imageUrls: ["https://via.placeholder.com/150", "https://via.placeholder.com/150"],
-            condition: "Good",
-            timestamp: Date(),
-            uid: "45768403j",
-            category: "Electronics"
-        )
-
-        let cart = SwapCart.shared
-        cart.addItem(mockItem1)
-        cart.addItem(mockItem2)
-
-        return SwapCartView().environmentObject(cart)
-    }
+//#Preview {
+//    let mockItem1 = Item(
+//            name: "Sample Item",
+//            details: "Sample details",
+//            originalprice: 120.0,
+//            value: 80.0,
+//            imageUrls: ["https://via.placeholder.com/150", "https://via.placeholder.com/150"],
+//            condition: "Good",
+//            timestamp: Date(),
+//            uid: "45768403j",
+//            category: "Sports", subcategory: "Hockey Stick",
+//            userName: "Flower Pot",
+//            latitude: 0.0,
+//            longitude: 0.0
+//        )
+//
+//        let mockItem2 = Item(
+//            name: "Sample Item 2",
+//            details: "Sample details",
+//            originalprice: 80.0,
+//            value: 66.0,
+//            imageUrls: ["https://via.placeholder.com/150", "https://via.placeholder.com/150"],
+//            condition: "Good",
+//            timestamp: Date(),
+//            uid: "45768403j",
+//            category: "Electronics", subcategory: "Tablet",
+//            userName: "Flower Pot",
+//            latitude: 0.0,
+//            longitude: 0.0
+//        )
+//
+//        let cart = SwapCart.shared
+//        cart.addItem(mockItem1)
+//        cart.addItem(mockItem2)
+//
+//        return SwapCartView().environmentObject(cart)
+//    }
     
 

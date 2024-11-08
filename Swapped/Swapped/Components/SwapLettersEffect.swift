@@ -52,7 +52,7 @@ struct SwapLettersEffect: ViewModifier {
 }
 
 extension View {
-    func swapLettersEffect(text: String, animation: Animation = .easeInOut(duration: 0.5).repeatForever(autoreverses: true)) -> some View {
+    func swapLettersEffect(text: String, animation: Animation = .easeInOut(duration: 2.5).repeatForever(autoreverses: true)) -> some View {
         self.modifier(SwapLettersEffect(text: text, animation: animation))
     }
 }
