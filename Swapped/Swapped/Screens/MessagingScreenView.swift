@@ -7,6 +7,8 @@
 import SwiftUI
 
 struct MessagingScreenView: View {
+    @Environment(\.colorScheme) var colorScheme // Detect current color scheme
+    
     @EnvironmentObject private var userAccountModel: UserAccountModel
     @StateObject private var messageManager = MessageManager() // Use StateObject for proper observation
     @State private var newMessage = ""
@@ -79,16 +81,32 @@ struct MessagingScreenView: View {
         }
     }
     
+//    private func setupMessagingScreen() {
+//        // Fetch other user's name and profile image
+//        userAccountModel.fetchNameAndProfileImage(userId: otherUserId) { name, image in
+//            otherUserName = name
+//            otherUserProfileImage = image
+//        }
+//        
+//        // Fetch full message thread between current user and other user
+//        messageManager.fetchUserMessages(currentUserId: currentUserId, otherUserId: otherUserId)
+//    }
     private func setupMessagingScreen() {
-        // Fetch other user's name and profile image
-        userAccountModel.fetchNameAndProfileImage(userId: otherUserId) { name, image in
-            otherUserName = name
-            otherUserProfileImage = image
+        Task {
+            // Fetch other user's name and profile image asynchronously
+            let (name, profileImage) = await userAccountModel.fetchNameAndProfileImage(userId: otherUserId)
+            print("Fetched user details: Name = \(name), Profile Image = \(profileImage != nil ? "Available" : "Not Available")")
+            
+            // Fetch full message thread between current user and other user asynchronously
+            do {
+                try await messageManager.fetchUserMessages(currentUserId: currentUserId, otherUserId: otherUserId)
+                print("Successfully fetched message thread")
+            } catch {
+                print("Failed to fetch message thread: \(error.localizedDescription)")
+            }
         }
-        
-        // Fetch full message thread between current user and other user
-        messageManager.fetchUserMessages(currentUserId: currentUserId, otherUserId: otherUserId)
     }
+
     
     private func sendMessage() {
         guard !newMessage.isEmpty else { return }

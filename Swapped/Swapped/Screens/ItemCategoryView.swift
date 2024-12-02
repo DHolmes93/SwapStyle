@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ItemCategoryView: View {
     let item: Item
+    @Environment(\.colorScheme) var colorScheme // Detect current color scheme
     
     var body: some View {
         VStack(alignment: .leading) {

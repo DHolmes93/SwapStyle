@@ -26,8 +26,10 @@ class ItemManager: ObservableObject {
     @EnvironmentObject private var locationManager: LocationManager
     private let categoryManager = CategoryManager.shared
     private let db = Firestore.firestore()
+    private var viewTimers: [String: Timer] = [:]
+    private var viewDurations: [String: Int] = [:]
     @Published var selectedCategory: Category? // assuming Category is Equatable
-    @Published var selectedSubcategory: Category? 
+    @Published var selectedSubcategory: Category?
 
     init() {}
 
@@ -79,9 +81,10 @@ class ItemManager: ObservableObject {
             "selectedSubCategory": selectedSubCategory,
             "imageUrls": imageUrls,
             "userName": userName,
-            "latitude": location.coordinate.latitude,
-            "longitude": location.coordinate.longitude
+            "latitude": location?.latitude ?? 0.0, // Default latitude
+            "longitude": location?.longitude ?? 0.0 // Default longitude
         ]
+
 
         try await db.collection("users").document(uid).collection("items").addDocument(data: itemData)
     }
@@ -98,12 +101,13 @@ class ItemManager: ObservableObject {
         let itemRef = db.collection("users").document(userUid).collection("items").document(item.uid)
         try await itemRef.setData(from: item)
     }
-
+    
     func fetchItems() async throws -> [Item] {
         guard let uid = Auth.auth().currentUser?.uid else {
             throw NSError(domain: "No user logged in", code: 401, userInfo: nil)
         }
 
+        // Fetch items from Firestore
         let userItemsRef = db.collection("users").document(uid).collection("items")
         let snapshot = try await userItemsRef.getDocuments()
         let items = snapshot.documents.compactMap { document in
@@ -112,9 +116,59 @@ class ItemManager: ObservableObject {
             return item
         }
 
-        self.items = items
-        return items
+        // Get the user's current location
+        let userCoordinates = try await LocationManager.shared.getCurrentLocation().0
+
+        guard let userCoordinates = userCoordinates else {
+            throw NSError(domain: "User location not available", code: 0, userInfo: nil)
+        }
+
+        let userLocation = CLLocation(latitude: userCoordinates.latitude, longitude: userCoordinates.longitude)
+
+        // Sort items by distance to user's location
+        let sortedItems = items.sorted { item1, item2 in
+            let distance1 = item1.distance(to: userLocation)
+            let distance2 = item2.distance(to: userLocation)
+            return distance1 < distance2
+        }
+
+        // Update internal state
+        self.items = sortedItems
+        return sortedItems
     }
+    func fetchItemsforUser(for userUID: String) async throws -> [Item] {
+        // Reference the Firestore collection for the specified user
+        let userItemsRef = db.collection("users").document(userUID).collection("items")
+        let snapshot = try await userItemsRef.getDocuments()
+
+        // Parse the documents into Item objects
+        let items = snapshot.documents.compactMap { document in
+            var item = try? document.data(as: Item.self)
+            item?.id = document.documentID
+            return item
+        }
+
+        // Get the user's current location
+        let userCoordinates = try await LocationManager.shared.getCurrentLocation().0
+
+        guard let userCoordinates = userCoordinates else {
+            throw NSError(domain: "User location not available", code: 0, userInfo: nil)
+        }
+
+        let userLocation = CLLocation(latitude: userCoordinates.latitude, longitude: userCoordinates.longitude)
+
+        // Sort items by distance to the user's location
+        let sortedItems = items.sorted { item1, item2 in
+            let distance1 = item1.distance(to: userLocation)
+            let distance2 = item2.distance(to: userLocation)
+            return distance1 < distance2
+        }
+
+        // Update internal state if needed
+        self.items = sortedItems
+        return sortedItems
+    }
+
 
     func requestSwap(fromItemId: String, toUserId: String, toItemId: String) async throws {
         guard let currentUserId = Auth.auth().currentUser?.uid else {
@@ -173,41 +227,145 @@ class ItemManager: ObservableObject {
     }
 
     func fetchItemsByDistance() async throws -> [Item] {
-        let userLocation = try await LocationManager.shared.getCurrentLocation().0  // Use only CLLocation
+        do {
+            // Fetch user's current location as CLLocationCoordinate2D
+            guard let userCoordinates = try await LocationManager.shared.getCurrentLocation().0 else {
+                throw NSError(domain: "LocationError", code: 0, userInfo: [NSLocalizedDescriptionKey: "User location is not available"])
+            }
 
-        let items = try await fetchAllItems()
+            // Convert CLLocationCoordinate2D to CLLocation
+            let userLocation = CLLocation(latitude: userCoordinates.latitude, longitude: userCoordinates.longitude)
 
-        // Sort items by distance to the user's location
-        let sortedItems = items.sorted {
-            $0.distance(to: userLocation) < $1.distance(to: userLocation)
+            // Fetch all items
+            let items = try await fetchAllItems()
+
+            // Sort items by distance to user's location
+            let sortedItems = items.sorted {
+                $0.distance(to: userLocation) < $1.distance(to: userLocation)
+            }
+
+            // Update internal state
+            self.items = sortedItems
+            return sortedItems
+        } catch {
+            print("Failed to fetch user location or items: \(error.localizedDescription)")
+
+            // Fallback to unsorted items
+            let items = try await fetchAllItems()
+            return items
         }
-
-        // Optionally update internal items state if needed
-        self.items = sortedItems
-        return sortedItems
     }
+
+
     // In LocationManager or ItemManager, depending on where fetchItemsByDistance is implemented
 
+//    func fetchItemsByKm(within radius: Double) async throws -> [Item] {
+//        let (userLocation, _, _, _, _) = try await LocationManager.shared.getCurrentLocation()
+//        let items = try await fetchAllItems()
+//
+//        // If radius is 50 km, fetch all items without filtering by distance
+//        if radius >= 50.0 {
+//            return items
+//        }
+//
+//        // Filter items within the specified radius without reverse geocoding
+//        let filteredItems = items.filter { item in
+//            let itemLocation = CLLocation(latitude: item.latitude, longitude: item.longitude)
+//            let distanceInKm = itemLocation.distance(from: userLocation) / 1000
+//            return distanceInKm <= radius
+//        }
+//
+//        return filteredItems
+//    }
     func fetchItemsByKm(within radius: Double) async throws -> [Item] {
-        let (userLocation, _, _, _, _) = try await LocationManager.shared.getCurrentLocation()
+        // Fetch the current user location
+        let (userCoordinates, _, _, _, _) = try await LocationManager.shared.getCurrentLocation()
+        
+        guard let userCoordinates = userCoordinates else {
+            throw NSError(domain: "User location is not available.", code: 0, userInfo: nil)
+        }
+        
+        // Convert userCoordinates to CLLocation
+        let userLocation = CLLocation(latitude: userCoordinates.latitude, longitude: userCoordinates.longitude)
+        
+        // Fetch all items
         let items = try await fetchAllItems()
         
-        // If radius is 50 km, fetch all items without filtering by distance
+        // If radius is 50 km or more, return all items without filtering
         if radius >= 50.0 {
             return items
         }
 
-        // Filter items within the specified radius without reverse geocoding
+        // Filter items within the specified radius
         let filteredItems = items.filter { item in
             let itemLocation = CLLocation(latitude: item.latitude, longitude: item.longitude)
-            let distanceInKm = itemLocation.distance(from: userLocation) / 1000
+            let distanceInKm = itemLocation.distance(from: userLocation) / 1000 // Convert meters to kilometers
             return distanceInKm <= radius
         }
         
         return filteredItems
     }
 
+    // Start tracking the view duration for an item
+        func startViewTimer(for item: Item) {
+            let itemId = item.uid
+            stopViewTimer(for: item) // Ensure no duplicate timers
 
+            viewDurations[itemId] = 0
+            viewTimers[itemId] = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+                guard let self = self else { return }
+                self.viewDurations[itemId, default: 0] += 1
+
+                if self.viewDurations[itemId]! >= 10 {
+                    timer.invalidate()
+                    self.viewTimers[itemId] = nil
+                    self.incrementClickCount(for: item)
+                }
+            }
+        }
+
+        // Stop the view timer for an item
+        func stopViewTimer(for item: Item) {
+            let itemId = item.uid
+            viewTimers[itemId]?.invalidate()
+            viewTimers[itemId] = nil
+            viewDurations[itemId] = nil
+        }
+
+        // Increment the click count for an item
+        func incrementClickCount(for item: Item) {
+            guard let index = items.firstIndex(where: { $0.uid == item.uid }) else { return }
+            items[index].clickCount += 1
+
+            // Update Firestore (example logic)
+            let itemToUpdate = items[index]
+            let itemRef = Firestore.firestore().collection("items").document(itemToUpdate.uid)
+            itemRef.updateData(["clickCount": itemToUpdate.clickCount]) { error in
+                if let error = error {
+                    print("Failed to update click count in Firestore: \(error.localizedDescription)")
+                }
+            }
+        }
+    // Increment the add-to-cart count for an item
+    func incrementAddToCartCount(for item: Item) {
+        guard let index = items.firstIndex(where: { $0.uid == item.uid }) else { return }
+        items[index].addToCartCount += 1
+
+        // Update Firestore (example logic)
+        let itemToUpdate = items[index]
+        let itemRef = Firestore.firestore().collection("items").document(itemToUpdate.uid)
+        itemRef.updateData(["addToCartCount": itemToUpdate.addToCartCount]) { error in
+            if let error = error {
+                print("Failed to update add-to-cart count in Firestore: \(error.localizedDescription)")
+            }
+        }
+    }
+    // Simulate adding an item to the cart
+    func addToCart(item: Item) {
+        // Perform necessary UI updates or logic for adding the item to the cart
+        incrementAddToCartCount(for: item)
+        print("Item added to cart: \(item.name)")
+    }
 
 
     func fetchItemsByCategory(category: String) async throws -> [Item] {
@@ -229,25 +387,86 @@ class ItemManager: ObservableObject {
         }
         return items
     }
+    
+    func fetchItemsByCategoryAndSubCategory(category: String, subcategory: String?) async throws -> [Item] {
+        var query = db.collection("items").whereField("category", isEqualTo: category)
+        
+        // If a subcategory is provided, add it to the query
+        if let subcategory = subcategory {
+            query = query.whereField("subcategory", isEqualTo: subcategory)
+        }
+        
+        let snapshot = try await query.getDocuments()
+        
+        let items = snapshot.documents.compactMap { document in
+            try? document.data(as: Item.self)
+        }
+        
+        return items
+    }
 
+//    func fetchItemsByCategoryAndSubcategoryAndDistance(category: String?, subcategory: String?, radius: Double?) async throws -> [Item] {
+//        // Fetch user's current location
+//        let (userCoordinates, city, state, zipcode, country) = try await LocationManager.shared.getCurrentLocation()
+//
+//        // Convert CLLocationCoordinate2D to CLLocation
+//        guard let userCoordinates = userCoordinates else {
+//            throw NSError(domain: "LocationError", code: 0, userInfo: [NSLocalizedDescriptionKey: "User location is not available"])
+//        }
+//        let userLocation = CLLocation(latitude: userCoordinates.latitude, longitude: userCoordinates.longitude)
+//
+//        // Fetch all items
+//        var items = try await fetchAllItems()
+//
+//        // Filter by category, subcategory, and radius if provided
+//        if let category = category {
+//            items = items.filter { $0.selectedCategory == category }
+//        }
+//        if let subcategory = subcategory {
+//            items = items.filter { $0.selectedSubCategory == subcategory }
+//        }
+//        if let radius = radius {
+//            items = items.filter { $0.distance(to: userLocation) <= radius }
+//        }
+//
+//        // Sort items by distance to user's location
+//        let sortedItems = items.sorted {
+//            $0.distance(to: userLocation) < $1.distance(to: userLocation)
+//        }
+//
+//        return sortedItems
+//    }
     func fetchItemsByCategoryAndSubcategoryAndDistance(category: String?, subcategory: String?, radius: Double?) async throws -> [Item] {
-        let (userLocation, city, state, zipcode, country) = try await LocationManager.shared.getCurrentLocation()
+        // Fetch user's current location
+        let (userCoordinates, _, _, _, _) = try await LocationManager.shared.getCurrentLocation()
+
+        // Ensure user location is available
+        guard let userCoordinates = userCoordinates else {
+            throw NSError(domain: "LocationError", code: 0, userInfo: [NSLocalizedDescriptionKey: "User location is not available"])
+        }
+        let userLocation = CLLocation(latitude: userCoordinates.latitude, longitude: userCoordinates.longitude)
+
+        // Fetch all items
         var items = try await fetchAllItems()
 
-        if let category = category {
+        // Apply filters
+        if let category = category, !category.isEmpty {
             items = items.filter { $0.selectedCategory == category }
         }
-        if let subcategory = subcategory {
+
+        if let subcategory = subcategory, !subcategory.isEmpty {
             items = items.filter { $0.selectedSubCategory == subcategory }
         }
+
         if let radius = radius {
             items = items.filter { $0.distance(to: userLocation) <= radius }
         }
 
-        let sortedItems = items.sorted { $0.distance(to: userLocation) < $1.distance(to: userLocation) }
-        return sortedItems
+        // Sort items by proximity to user's location
+        return items.sorted { $0.distance(to: userLocation) < $1.distance(to: userLocation) }
     }
-    
+
+
     func getUsername(for itemId: String) async throws -> String {
         let document = try await db.collection("items").document(itemId).getDocument()
         guard let data = document.data(), let userId = data["uid"] as? String else {
@@ -287,19 +506,28 @@ struct SwapRequest: Codable {
             var userName: String
             var latitude: Double
             var longitude: Double
+            var clickCount: Int // New property to track clicks
+            var distanceToUser: Double? // Optional, as it may not always be available
+            var addToCartCount: Int = 0
+
 
 
             var location: CLLocation? {
             
             return CLLocation(latitude: latitude, longitude: longitude)
         }
+        
         func distance(to location: CLLocation) -> CLLocationDistance {
-            return self.location!.distance(from: location)
+             let itemLocation = CLLocation(latitude: self.latitude, longitude: self.longitude)
+             return itemLocation.distance(from: location)
+         }
+        func topThreeItems(from items: [Item]) -> [Item] {
+            return items.sorted { $0.clickCount > $1.clickCount }.prefix(3).map { $0 }
         }
         
 
 
-        init(name: String, details: String, originalprice: Double, value: Double, imageUrls: [String], condition: String, timestamp: Date, uid: String, selectedCategory: String, selectedSubCategory: String?, userName: String, latitude: Double, longitude: Double) {
+        init(name: String, details: String, originalprice: Double, value: Double, imageUrls: [String], condition: String, timestamp: Date, uid: String, selectedCategory: String, selectedSubCategory: String?, userName: String, latitude: Double, longitude: Double, clickCount: Int) {
                 self.uid = uid
                 self.name = name
                 self.details = details
@@ -313,6 +541,7 @@ struct SwapRequest: Codable {
                 self.userName = userName
                 self.latitude = latitude
                 self.longitude = longitude
+                self.clickCount = clickCount
            }
 
            init(from decoder: Decoder) throws {
@@ -331,6 +560,7 @@ struct SwapRequest: Codable {
                userName = try container.decodeIfPresent(String.self, forKey: .userName) ?? ""
                latitude = try container.decodeIfPresent(Double.self, forKey: .latitude) ?? 0.0
                longitude = try container.decodeIfPresent(Double.self, forKey: .longitude) ?? 0.0
+               clickCount = try container.decodeIfPresent(Int.self, forKey: .clickCount) ?? 0
 
            }
         func toDictionary() -> [String: Any] {
@@ -353,6 +583,12 @@ struct SwapRequest: Codable {
             }
 
         }
+extension Item {
+    func isPopular(in topItems: [Item]) -> Bool {
+        return topItems.contains(where: { $0.id == self.id })
+    }
+}
+
 
 //extension Item {
 //    func distance(to location: CLLocation) -> Double {

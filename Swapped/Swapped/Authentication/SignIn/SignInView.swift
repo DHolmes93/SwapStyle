@@ -11,10 +11,14 @@ import FirebaseAuth
 import GoogleSignInSwift
 
 struct SignInView: View {
+    
+    @Environment(\.colorScheme) var colorScheme // Detect current color scheme
+    
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var isNavigating = false // Control navigation
     @EnvironmentObject private var authManager: AuthManager
+    @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
         NavigationStack {

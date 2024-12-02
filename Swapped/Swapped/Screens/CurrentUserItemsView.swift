@@ -105,6 +105,7 @@ import SDWebImage
 
 struct CurrentUserItemsView: View {
     var itemToSwap: Item?
+    @Environment(\.colorScheme) var colorScheme // Detect current color scheme
     @State private var initiateSwap = false
     @EnvironmentObject private var itemManager: ItemManager
     @EnvironmentObject private var swapCart: SwapCart

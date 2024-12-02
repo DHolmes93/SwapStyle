@@ -89,7 +89,7 @@ struct ContentView: View {
         Task {
             do {
                 let (location, city, state, zip, country) = try await LocationManager.shared.getCurrentLocation()
-                print("Current location: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+//                print("Current location: \(location.coordinate.latitude), \(location.coordinate.longitude)")
                 print("City: \(city), State: \(state), Zip: \(zip), Country: \(country)")
             } catch {
                 print("Failed to get location: \(error.localizedDescription)")

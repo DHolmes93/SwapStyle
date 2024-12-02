@@ -17,6 +17,8 @@ struct ItemView: View {
     let item: Item
     let userAccountModel: UserAccountModel
     
+    @Environment(\.colorScheme) var colorScheme // Detect current color scheme
+    
     @EnvironmentObject private var swapCart: SwapCart
     @EnvironmentObject private var itemManager: ItemManager
     @StateObject private var locationManager = LocationManager()
@@ -131,11 +133,11 @@ struct ItemView: View {
                 .font(.title2)
                 .fontWeight(.bold)
             
-            NavigationLink(destination: UserProfileView()) {
-                       Text("Owner: \(item.userName)")
-                           .font(.subheadline)
-                           .foregroundColor(.blue) // Use a color to indicate it's tappable
-                   }
+            NavigationLink(destination: UserProfileView(userUID: item.uid)) {
+                Text("Owner: \(item.userName)")
+                    .font(.subheadline)
+                    .foregroundColor(.blue) // Indicate it's tappable
+            }
             
             HStack {
                 Text("Condition: \(item.condition)")
@@ -151,12 +153,12 @@ struct ItemView: View {
                 .font(.subheadline)
         }
     }
+
     
     private var actionButtonsSection: some View {
         Group {
-            if item.userName != currentUserName {
                 HStack(spacing: 40) {
-                    NavigationLink(destination: MessagingScreenView(currentUserId: "currentUserId", otherUserId: item.uid, chatId: "\(item.uid)_chat")) {
+                    NavigationLink(destination: MessagingScreenView(currentUserId: currentUserName, otherUserId: userAccountModel.id ?? "Unknown", chatId: "\(item.uid)_chat")) {
                         Text("Send Message")
                             .foregroundStyle(Color("mainColor"))
                             .padding()
@@ -180,15 +182,22 @@ struct ItemView: View {
                 .padding()
                 .background(Color.white) // Example of consistent styling
                 .cornerRadius(10)
-            } else {
-                AnyView(EmptyView()) // Use AnyView to handle type mismatch
-            }
         }
     }
+
     private func calculateDistanceToItem() async {
         do {
             // Get the user's current location, assuming the method returns a tuple
-            let (currentLocation, _, _, _, _) = try await locationManager.getCurrentLocation()
+            let (currentLocationCoordinate, _, _, _, _) = try await locationManager.getCurrentLocation()
+
+            // Ensure currentLocationCoordinate is not nil
+            guard let currentLocationCoordinate = currentLocationCoordinate else {
+                print("Current location is nil")
+                return
+            }
+
+            // Convert currentLocationCoordinate to CLLocation
+            let currentLocation = CLLocation(latitude: currentLocationCoordinate.latitude, longitude: currentLocationCoordinate.longitude)
 
             // Create a CLLocation object for the item's location
             let itemLocation = CLLocation(latitude: item.latitude, longitude: item.longitude)
@@ -202,6 +211,7 @@ struct ItemView: View {
             print("Failed to get current location: \(error.localizedDescription)")
         }
     }
+
 
 
     private var swapPossibleIndicator: some View {
@@ -289,10 +299,25 @@ struct ItemView: View {
     
     private func fetchUserAccount(for uid: String) {
         Firestore.firestore().collection("users").document(uid).getDocument { document, error in
-            if let document = document, document.exists {
-                let data = document.data()
-                _ = data?["name"] as? String ?? "Unknown"
-                self.fetchedUserAccount = UserAccountModel(authManager: AuthManager()) // Set fetched values here as needed
+            if let error = error {
+                print("Error fetching user data: \(error.localizedDescription)")
+                return
+            }
+            
+            guard let document = document, document.exists else {
+                print("User document not found for uid: \(uid)")
+                return
+            }
+            
+            guard let data = document.data() else {
+                print("No data found in user document for uid: \(uid)")
+                return
+            }
+            
+            // Map Firestore document data to UserAccountModel
+            if let name = data["name"] as? String {
+                self.fetchedUserAccount = UserAccountModel(authManager: AuthManager())
+                self.fetchedUserAccount?.name = name
             }
         }
     }

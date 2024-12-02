@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct SwappedView: View {
+    @Environment(\.colorScheme) var colorScheme // Detect current color scheme
     @EnvironmentObject var swapCart: SwapCart
     @State private var selectedView = "Swapped Items"
     var body: some View {

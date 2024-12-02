@@ -12,7 +12,9 @@ import FirebaseStorage
 import FirebaseFirestoreSwift
 
 struct SwapCartView: View {
+    @Environment(\.colorScheme) var colorScheme // Detect current color scheme
     @EnvironmentObject private var swapCart: SwapCart
+    
     @State private var errorMessage: String?
     var body: some View {
         NavigationStack {

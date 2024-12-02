@@ -15,9 +15,18 @@ import FirebaseAuth
 import GooglePlaces
 
 // MARK: - NotificationManager
-class NotificationManager: NSObject, UNUserNotificationCenterDelegate, MessagingDelegate {
+class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     
     static let shared = NotificationManager()
+    
+    var unreadMessageCount: Int = 0 {
+        didSet {
+            // Update the app's badge with the number of unread messages
+            DispatchQueue.main.async {
+                UIApplication.shared.applicationIconBadgeNumber = self.unreadMessageCount
+            }
+        }
+    }
     
     // MARK: - Request Notification Authorization
     func requestNotificationAuthorization(application: UIApplication) {
@@ -33,6 +42,30 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate, Messaging
                 } else {
                     print("User denied notifications.")
                 }
+            }
+        }
+    }
+    
+    // MARK: - Schedule Message Notification
+    func scheduleMessageNotification(message: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "New Message"
+        content.body = message
+        content.sound = .default
+        content.userInfo = ["type": "message"]
+        
+        // Update unread message count
+        unreadMessageCount += 1
+        
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Failed to schedule notification: \(error.localizedDescription)")
+            } else {
+                print("Notification scheduled successfully.")
             }
         }
     }
@@ -81,6 +114,22 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate, Messaging
         let userInfo = notification.request.content.userInfo
         print("Foreground notification received with userInfo: \(userInfo)")
         
+        // Check the notification type and handle accordingly
+        if let notificationType = userInfo["type"] as? String {
+            switch notificationType {
+            case "message":
+                // Handle messaging notification in foreground
+                print("Received a message notification in foreground")
+                // Optionally, navigate to the messaging screen
+            case "swapRequest":
+                // Handle swap request notification in foreground
+                print("Received a swap request notification in foreground")
+                // Optionally, navigate to the swap screen
+            default:
+                break
+            }
+        }
+        
         // Customize which notifications to show while the app is in the foreground
         completionHandler([.banner, .sound, .badge])
     }
@@ -90,7 +139,22 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate, Messaging
         let userInfo = response.notification.request.content.userInfo
         print("User tapped on notification with userInfo: \(userInfo)")
         
-        // Handle notification action based on userInfo if needed
+        // Handle the notification action based on the type
+        if let notificationType = userInfo["type"] as? String {
+            switch notificationType {
+            case "message":
+                // Handle message notification action (e.g., open the messaging screen)
+                print("User tapped on message notification")
+                // Optionally, navigate to the message thread
+            case "swapRequest":
+                // Handle swap request notification action (e.g., open the swap request screen)
+                print("User tapped on swap request notification")
+                // Optionally, navigate to the swap request screen
+            default:
+                break
+            }
+        }
+        
         completionHandler()
     }
 }
@@ -99,6 +163,7 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate, Messaging
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     var profileItem: ProfileData?
+    var userSession: UserSession?
 
 //    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
 //        // Configure Firebase
@@ -116,6 +181,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 //    }
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+
         // Configure Firebase with proper error handling
         if FirebaseApp.app() == nil {
             FirebaseApp.configure()
@@ -129,7 +195,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         // Set Delegates for Notifications
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
-        Messaging.messaging().delegate = NotificationManager.shared
+        Messaging.messaging().delegate = NotificationManager.shared as? any MessagingDelegate
 
         return true
     }
@@ -167,39 +233,3 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 
 // MARK: - SwiftUI App
-@main
-struct JustSwap: App {
-    @StateObject private var authManager = AuthManager.shared
-    @StateObject private var swapCart = SwapCart.shared
-    @StateObject private var categoryManager = CategoryManager.shared
-    @StateObject private var itemManager = ItemManager.shared
-    @StateObject private var viewModel = UserAccountModel.shared
-    @StateObject private var locationManager = LocationManager.shared
-    @StateObject private var profile = Profile()
-    @StateObject private var profileItem = ProfileData()
-
-
-    // Integrate AppDelegate
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
-    init() {
-            // Assign the profileItem instance to the AppDelegate
-            appDelegate.profileItem = profileItem
-        }
-
-    
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-                .environmentObject(authManager)
-                .environmentObject(swapCart)
-                .environmentObject(categoryManager)
-                .environmentObject(itemManager)
-                .environmentObject(locationManager)
-                .environmentObject(viewModel)
-                .environmentObject(profile)
-                .environmentObject(profileItem)
-        }
-    }
-}
-

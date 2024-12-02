@@ -9,6 +9,8 @@ import CoreLocation
 import SwiftUI
 
 struct CreateProfileView: View {
+    @Environment(\.colorScheme) var colorScheme // Detect current color scheme
+    
     @EnvironmentObject private var authManager: AuthManager
     @EnvironmentObject private var userAccountModel: UserAccountModel
     @State private var isSignUpSuccess = false
@@ -176,16 +178,25 @@ struct CreateProfileView: View {
         return ageComponents.year ?? 0 >= 18
     }
 
-    private func requestLocationAccess() {
-        locationManager.requestLocationAuthorization()
-        DispatchQueue.main.async {
-            if locationManager.isLocationDenied {
+    private func requestLocationAccess() async {
+        do {
+            try await locationManager.requestLocationAuthorization() // Use `try` to handle the throwing function
+            DispatchQueue.main.async {
+                if locationManager.isLocationDenied {
+                    locationAuthorizationAlertShown = true
+                } else {
+                    loadUserLocation()
+                }
+            }
+        } catch {
+            // Handle the error here
+            print("Failed to request location authorization: \(error.localizedDescription)")
+            DispatchQueue.main.async {
                 locationAuthorizationAlertShown = true
-            } else {
-                loadUserLocation()
             }
         }
     }
+
 
     private func loadUserLocation() {
         Task {

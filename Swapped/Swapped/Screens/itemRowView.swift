@@ -9,7 +9,9 @@ import SwiftUI
 import SDWebImageSwiftUI
 
 struct itemRowView: View {
+    @Environment(\.colorScheme) var colorScheme // Detect current color scheme
     @EnvironmentObject private var itemManager: ItemManager
+    @EnvironmentObject private var themeManager: ThemeManager
     let item: Item
     var body: some View {
         HStack {
@@ -29,7 +31,7 @@ struct itemRowView: View {
             Spacer()
             NavigationLink(destination: EditItemView(item: item)) {
                 Text("Edit")
-                    .foregroundStyle(Color.blue)
+                    .foregroundStyle(Color(themeManager.theme.mainColor))
                     .padding(.horizontal)
                     .padding(.vertical, 6)
                     .cornerRadius(8)

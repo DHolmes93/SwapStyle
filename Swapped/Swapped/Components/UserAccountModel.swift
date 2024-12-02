@@ -120,40 +120,45 @@ class UserAccountModel: ObservableObject, Decodable {
          }
     
     func createProfile() async -> Bool {
-           guard let userId = Auth.auth().currentUser?.uid else {
-               print("No authenticated user found.")
-               return false
-           }
+        guard let userId = Auth.auth().currentUser?.uid else {
+            print("No authenticated user found.")
+            return false
+        }
 
-           // Ensure profileImageUrl is available
-           guard let profileImageUrl = self.profileImageUrl else {
-               print("Profile image URL is nil")
-               return false
-           }
+        guard let profileImageUrl = self.profileImageUrl, !profileImageUrl.isEmpty else {
+            print("Profile image URL is missing.")
+            return false
+        }
 
-           // Create the user profile data
-           let userProfileData: [String: Any] = [
-               "name": self.name,
-               "city": self.city,
-               "state": self.state,
-               "country": self.country,
-               "zipcode": self.zipcode,
-               "birthdate": self.birthdate,
-               "goals": self.goals,
-               "interests": self.interests,
-               "skills": self.skills,
-               "profileImageUrl": profileImageUrl
-           ]
+        // Ensure all necessary fields are provided
+        guard !self.name.isEmpty else {
+            print("Name is required.")
+            return false
+        }
 
-           do {
-               // Save the profile data to Firestore
-               try await Firestore.firestore().collection("users").document(userId).setData(userProfileData, merge: true)
-               return true
-           } catch {
-               print("Error saving profile: \(error.localizedDescription)")
-               return false
-           }
-       }
+        let userProfileData: [String: Any] = [
+            "name": self.name,
+            "city": self.city,
+            "state": self.state,
+            "country": self.country,
+            "zipcode": self.zipcode,
+            "birthdate": self.birthdate,
+            "goals": self.goals,
+            "interests": self.interests,
+            "skills": self.skills,
+            "profileImageUrl": profileImageUrl
+        ]
+
+        do {
+            try await Firestore.firestore().collection("users").document(userId).setData(userProfileData, merge: true)
+            print("Profile created successfully.")
+            return true
+        } catch {
+            print("Error saving profile: \(error.localizedDescription)")
+            return false
+        }
+    }
+
     func fetchProfile() async -> Bool {
         guard let userId = Auth.auth().currentUser?.uid else {
             print("No authenticated user found.")
@@ -195,30 +200,135 @@ class UserAccountModel: ObservableObject, Decodable {
 
         return true
     }
+    
+    func fetchUserProfile(userUID: String) async throws {
+           do {
+               let document = try await Firestore.firestore().collection("users").document(userUID).getDocument()
+               
+               guard let data = document.data() else {
+                   throw URLError(.badServerResponse)
+               }
+
+               DispatchQueue.main.async {
+                   self.name = data["name"] as? String ?? "Unknown"
+                   self.email = data["email"] as? String ?? "No Email"
+                   self.city = data["city"] as? String ?? "Unknown"
+                   self.state = data["state"] as? String ?? "Unknown"
+                   self.zipcode = data["zipcode"] as? String ?? "Unknown"
+                   self.country = data["country"] as? String ?? "Unknown"
+                   self.rating = data["rating"] as? Double ?? 0.0
+                   self.profileImageUrl = data["profileImageUrl"] as? String
+                   self.needs = data["needs"] as? [String] ?? []
+                   self.interests = data["interests"] as? [String] ?? []
+                   self.goals = data["goals"] as? [String] ?? []
+                   self.skills = data["skills"] as? [String] ?? []
+                   self.isProfileCompleted = data["isProfileCompleted"] as? Bool ?? false
+               }
+           } catch {
+               print("Error fetching user profile: \(error.localizedDescription)")
+               throw error
+           }
+       }
+    func fetchAndSetProfileImage() async {
+            guard let imageUrlString = self.profileImageUrl,
+                  let imageUrl = URL(string: imageUrlString) else {
+                print("Invalid profileImageUrl.")
+                return
+            }
+
+            do {
+                // Fetch the image data from the URL
+                let (data, _) = try await URLSession.shared.data(from: imageUrl)
+                if let fetchedImage = UIImage(data: data) {
+                    DispatchQueue.main.async {
+                        self.profileImage = fetchedImage
+                    }
+                    print("Profile image fetched successfully.")
+                } else {
+                    print("Failed to convert data to UIImage.")
+                }
+            } catch {
+                // Handle errors
+                print("Error fetching profile image: \(error.localizedDescription)")
+            }
+        }
+    func uploadProfileImage(image: UIImage) async -> Bool {
+        // Ensure the user is authenticated
+        guard let currentUser = authManager.currentUser else {
+            print("User is not authenticated.")
+            return false
+        }
+        
+        // Use the authenticated user's ID
+        let uid = currentUser.id
+        print("Uploading image for user ID: \(uid)")
+
+        // Create a reference to Firebase Storage
+        let storageRef = Storage.storage().reference()
+        let profileImageRef = storageRef.child("profileImages/\(uid).jpg")
+
+        // Convert UIImage to JPEG data
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            print("Failed to convert image to JPEG data.")
+            return false
+        }
+
+        do {
+            // Upload the image to Firebase Storage
+            let _ = try await profileImageRef.putDataAsync(imageData)
+
+            // Retrieve the download URL for the uploaded image
+            let downloadURL = try await profileImageRef.downloadURL()
+
+            // Save the download URL to Firestore under the user's document
+            try await Firestore.firestore()
+                .collection("users")
+                .document(uid)
+                .updateData(["profileImageUrl": downloadURL.absoluteString])
+
+            print("Profile image uploaded successfully. URL: \(downloadURL.absoluteString)")
+
+            // Optional: You can update the userAccountModel to reflect the new image URL
+            DispatchQueue.main.async {
+                // Assuming userAccountModel has profileImageUrl as a published property
+                self.profileImageUrl = downloadURL.absoluteString
+            }
+
+            return true
+        } catch let error as NSError {
+            // Log the error details for troubleshooting
+            print("Error uploading image: \(error.domain) (\(error.code)): \(error.localizedDescription)")
+            return false
+        }
+    }
+
+
 
 
     // MARK: - Public Function to Call Both Methods Sequentially
     func uploadImageAndCreateProfile(image: UIImage) async -> Bool {
-           guard let userId = Auth.auth().currentUser?.uid else {
-               print("User not authenticated.")
-               return false
-           }
-           
-           // Upload profile image and wait for completion
-           let imageUploadSuccess = await uploadProfileImage(image: image, uid: userId)
-           
-           // If image upload was successful, proceed to create the profile
-           if imageUploadSuccess {
-               let profileCreationSuccess = await createProfile()
-               return profileCreationSuccess
-           } else {
-               print("Image upload failed. Profile creation aborted.")
-               return false
-           }
-       }
+        guard let userId = Auth.auth().currentUser?.uid else {
+            print("User not authenticated.")
+            return false
+        }
 
-
-    
+        do {
+            // Upload profile image
+            let imageUploadSuccess = await uploadProfileImage(image: image)
+            
+            if imageUploadSuccess {
+                // Create profile if image upload succeeds
+                let profileCreationSuccess = await createProfile()
+                return profileCreationSuccess
+            } else {
+                print("Image upload failed. Profile creation aborted.")
+                return false
+            }
+        } catch {
+            print("Unexpected error: \(error.localizedDescription)")
+            return false
+        }
+    }
     private func createUserSubCollections(for userId: String) async -> Bool {
         let userReviewsRef = Firestore.firestore().collection("users").document(userId).collection("reviews")
         
@@ -275,37 +385,6 @@ class UserAccountModel: ObservableObject, Decodable {
             return element
         }
     }
-
-//    func convertFirestoreData(_ documentData: [String: Any]) -> [String: Any] {
-//        var jsonCompatibleData = [String: Any]()
-//
-//        for (key, value) in documentData {
-//            if let dateValue = value as? Date {
-//                // Convert Date to ISO8601 string or timestamp
-//                jsonCompatibleData[key] = dateValue.timeIntervalSince1970 // or use dateValue.ISO8601String() if you prefer a string format
-//            } else if let subDict = value as? [String: Any] {
-//                // Recursively handle nested dictionaries
-//                jsonCompatibleData[key] = convertFirestoreData(subDict)
-//            } else if let subArray = value as? [Any] {
-//                // Recursively handle arrays
-//                jsonCompatibleData[key] = subArray.map { element in
-//                    if let dateElement = element as? Date {
-//                        return dateElement.timeIntervalSince1970
-//                    } else if let dictElement = element as? [String: Any] {
-//                        return convertFirestoreData(dictElement)
-//                    } else {
-//                        return element
-//                    }
-//                }
-//            } else {
-//                // Copy any other values as they are JSON compatible
-//                jsonCompatibleData[key] = value
-//            }
-//        }
-//        
-//        return jsonCompatibleData
-//    }
-
 
     func loadUserDetails() async {
         guard let userId = await authManager.currentUser?.id else {
@@ -418,8 +497,6 @@ class UserAccountModel: ObservableObject, Decodable {
         print("Profile completion status: \(isProfileCompleted)")
     }
 
-
-
     func fetchUserDetails() async {
            await loadUserDetails() // Fetches user details and updates the model
        }
@@ -446,61 +523,154 @@ class UserAccountModel: ObservableObject, Decodable {
         }
 
         if let profileImage = profileImage {
-            await uploadProfileImage(image: profileImage, uid: currentUser.uid)
+            await uploadProfileImage(image: profileImage)
         } else {
             await saveUserAdditionalDetails(uid: currentUser.uid)
         }
     }
 
-    func uploadProfileImage(image: UIImage, uid: String) async -> Bool {
-            guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-                print("Failed to convert profile image to JPEG data.")
-                return false
-            }
+//    func fetchProfileImageUrl() async -> String? {
+//        guard let uid = Auth.auth().currentUser?.uid else {
+//            print("User not authenticated")
+//            return nil
+//        }
+//
+//        let db = Firestore.firestore()
+//        let userDocRef = db.collection("users").document(uid)
+//
+//        do {
+//            let document = try await userDocRef.getDocument()
+//            if let data = document.data() {
+//                print("Document data: \(data)")  // Log the entire document data
+//                if let profileImageUrl = data["profileImageUrl"] as? String {
+//                    print("Profile image URL: \(profileImageUrl)")  // Log the fetched URL
+//                    return profileImageUrl
+//                } else {
+//                    print("Profile image URL not found in document data.")
+//                    return nil
+//                }
+//            } else {
+//                print("Document does not exist.")
+//                return nil
+//            }
+//        } catch {
+//            print("Error fetching user document: \(error.localizedDescription)")
+//            return nil
+//        }
+//    }
+    // Fetches the profile image URL for the current user
+    func fetchProfileImageUrl() async {
+        guard let uid = authManager.currentUser?.id else {
+            print("User not authenticated")
+            return
+        }
 
-            let storageRef = Storage.storage().reference().child("profileImages/\(uid).jpg")
+        do {
+            // Fetch user document from Firestore
+            let document = try await Firestore.firestore()
+                .collection("users")
+                .document(uid)
+                .getDocument()
 
-            do {
-                // Upload image data to Firebase Storage
-                _ = try await storageRef.putDataAsync(imageData)
-                
-                // Get download URL of the uploaded image
-                let downloadURL = try await storageRef.downloadURL()
-                
-                // Update profileImageUrl with the downloaded URL string
+            // Check if document exists and retrieve the image URL from Firestore
+            if let data = document.data(), let imageUrl = data["profileImageUrl"] as? String {
+                // Ensure that UI updates are done on the main thread
                 DispatchQueue.main.async {
-                    self.profileImageUrl = downloadURL.absoluteString
+                    self.profileImageUrl = imageUrl
                 }
-                
-                return true
-            } catch {
-                print("Error uploading image: \(error.localizedDescription)")
-                return false
+                print("Fetched profile image URL: \(imageUrl)")
             }
+        } catch {
+            print("Error fetching profile image URL: \(error.localizedDescription)")
         }
+    }
 
-        func fetchProfileImageUrl() async -> String? {
-            guard let uid = Auth.auth().currentUser?.uid else {
-                print("User not authenticated")
-                return nil
-            }
 
-            let db = Firestore.firestore()
-            let userDocRef = db.collection("users").document(uid)
+//    func fetchProfileImageUrl() async {
+//        // Ensure the user is authenticated
+//        guard let currentUser = authManager.currentUser else {
+//            print("User is not authenticated.")
+//            return
+//        }
+//        
+//        // Use the authenticated user's ID
+//        let uid = currentUser.id
+//        print("Fetching profile image URL for user ID: \(uid)")
+//
+//        do {
+//            // Fetch the user's document from Firestore
+//            let documentSnapshot = try await Firestore.firestore()
+//                .collection("users")
+//                .document(uid)
+//                .getDocument()
+//
+//            // Check if the document exists
+//            if documentSnapshot.exists {
+//                // Retrieve the profileImageUrl from the document
+//                if let profileImageUrl = documentSnapshot.get("profileImageUrl") as? String {
+//                    self.profileImageUrl = profileImageUrl
+//                    print("Fetched profile image URL: \(profileImageUrl)")
+//                } else {
+//                    print("No profileImageUrl found in Firestore for user ID: \(uid)")
+//                }
+//            } else {
+//                print("No document found for user ID: \(uid)")
+//            }
+//        } catch let error as NSError {
+//            // Log the error details for troubleshooting
+//            print("Error fetching profile image URL: \(error.domain) (\(error.code)): \(error.localizedDescription)")
+//        }
+//    }
 
-            do {
-                let document = try await userDocRef.getDocument()
-                guard let data = document.data(),
-                      let profileImageUrl = data["profileImageUrl"] as? String else {
-                    print("User document does not exist or profileImageUrl not found")
-                    return nil
-                }
-                return profileImageUrl
-            } catch {
-                print("Error fetching user document: \(error.localizedDescription)")
-                return nil
-            }
-        }
+//    func fetchProfileImageUrl() async {
+//        guard let uid = Auth.auth().currentUser?.uid else {
+//            print("User not authenticated")
+//            return
+//        }
+//
+//        let db = Firestore.firestore()
+//        let userDocRef = db.collection("users").document(uid)
+//
+//        do {
+//            let document = try await userDocRef.getDocument()
+//            guard let data = document.data(),
+//                  let profileImageUrl = data["profileImageUrl"] as? String else {
+//                print("Profile image URL not found in document.")
+//                return
+//            }
+//            self.profileImageUrl = profileImageUrl
+//            print("Fetched profileImageUrl: \(profileImageUrl)")  // Debugging line
+//        } catch {
+//            print("Error fetching user document: \(error.localizedDescription)")
+//        }
+//    }
+
+
+//      func fetchProfileImageUrl() async {
+//          guard let uid = Auth.auth().currentUser?.uid else {
+//              print("User not authenticated")
+//              return
+//          }
+//
+//          let db = Firestore.firestore()
+//          let userDocRef = db.collection("users").document(uid)
+//
+//          do {
+//              let document = try await userDocRef.getDocument()
+//              guard let data = document.data(),
+//                    let profileImageUrl = data["profileImageUrl"] as? String else {
+//                  print("User document does not exist or profileImageUrl not found")
+//                  return
+//              }
+//              // Update the profileImageUrl
+//              DispatchQueue.main.async {
+//                  self.profileImageUrl = profileImageUrl
+//              }
+//          } catch {
+//              print("Error fetching user document: \(error.localizedDescription)")
+//          }
+//      }
+    
     func fetchProfileImageUrlForUser(for userId: String) async -> String? {
         let db = Firestore.firestore()
         let userDocRef = db.collection("users").document(userId)
@@ -518,7 +688,6 @@ class UserAccountModel: ObservableObject, Decodable {
             return nil
         }
     }
-    
 
     private func saveUserAdditionalDetails(uid: String) async {
         let userDocumentRef = Firestore.firestore().collection("users").document(uid)
@@ -547,61 +716,75 @@ class UserAccountModel: ObservableObject, Decodable {
             print("Error updating user details: \(error.localizedDescription)")
         }
     }
-
-
-
     // MARK: - Fetch Name and Profile Image
-
-    func fetchNameAndProfileImage(userId: String, completion: @escaping (String, UIImage?) -> Void) {
+    func fetchNameAndProfileImage(userId: String) async -> (String, UIImage?) {
+        // Check cache first
         if let name = otherUserNames[userId], let profileImage = otherUserProfileImages[userId] {
-            completion(name, profileImage)
-            return
+            return (name, profileImage)
         }
-
-        Firestore.firestore().collection("users").document(userId).getDocument { document, error in
-            guard let document = document, document.exists else {
-                completion("Unknown", nil)
-                return
+        
+        do {
+            let document = try await Firestore.firestore()
+                .collection("users")
+                .document(userId)
+                .getDocument()
+            
+            guard document.exists else {
+                print("User document does not exist for UID: \(userId)")
+                return ("Unknown", nil)
             }
-
+            
+            // Extract user data
             let name = document.data()?["name"] as? String ?? "Unknown"
-            self.otherUserNames[userId] = name
+            otherUserNames[userId] = name
             
             if let profileImageUrl = document.data()?["profileImageUrl"] as? String {
-                self.fetchProfileImage(from: profileImageUrl) { image in
-                    self.otherUserProfileImages[userId] = image
-                    completion(name, image)
+                // Fetch profile image asynchronously
+                if let image = await fetchProfileImage(from: profileImageUrl) {
+                    otherUserProfileImages[userId] = image
+                    return (name, image)
+                } else {
+                    print("Failed to fetch profile image for URL: \(profileImageUrl)")
                 }
-            } else {
-                completion(name, nil)
             }
+            return (name, nil)
+        } catch {
+            print("Error fetching user document: \(error.localizedDescription)")
+            return ("Unknown", nil)
+        }
+    }
+    // MARK: - Helper Methods
+    func fetchProfileImage(from url: String) async -> UIImage? {
+        guard let imageUrl = URL(string: url) else { return nil }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: imageUrl)
+            return UIImage(data: data)
+        } catch {
+            print("Failed to download image: \(error.localizedDescription)")
+            return nil
+        }
+    }
+    // MARK: - Helper Methods
+    func fetchCurrentUserProfileImage() async -> UIImage? {
+        // Ensure the user is authenticated
+        guard let currentUser = authManager.currentUser,
+              let profileImageUrl = userAccountData?.profileImageUrl,  // Assuming this property exists
+              let imageUrl = URL(string: profileImageUrl) else {
+            print("Current user or profile image URL not available.")
+            return nil
+        }
+
+        do {
+            // Fetch the image data from the URL
+            let (data, _) = try await URLSession.shared.data(from: imageUrl)
+            return UIImage(data: data)
+        } catch {
+            // Handle errors and log them
+            print("Failed to download image for user \(currentUser.id): \(error.localizedDescription)")
+            return nil
         }
     }
 
-    // MARK: - Helper Methods
-    func fetchProfileImage(from imageUrl: String, completion: @escaping (UIImage?) -> Void) {
-           guard let url = URL(string: imageUrl) else {
-               completion(nil)
-               return
-           }
-
-           // Fetch the image data
-           URLSession.shared.dataTask(with: url) { data, response, error in
-               if let error = error {
-                   print("Error fetching profile image: \(error.localizedDescription)")
-                   completion(nil)
-                   return
-               }
-               guard let data = data, let image = UIImage(data: data) else {
-                   print("Failed to convert data to image.")
-                   completion(nil)
-                   return
-               }
-               DispatchQueue.main.async {
-                   completion(image) // Call the completion handler with the loaded image
-               }
-           }.resume() // Don't forget to resume the task
-       }
 
     // Convert the object to a dictionary for saving to Firestore
     func toDictionary() -> [String: Any] {
@@ -619,7 +802,6 @@ class UserAccountModel: ObservableObject, Decodable {
         ]
     }
 }
-
 // Review model
 struct Review: Codable, Identifiable {
     @DocumentID var id: String?

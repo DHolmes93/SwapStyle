@@ -8,6 +8,8 @@ import SwiftUI
 import PhotosUI
 
 struct AddItem: View {
+    @Environment(\.colorScheme) var colorScheme // Detect current color scheme
+    
     @StateObject var viewModel = AddItemViewModel()
     @EnvironmentObject private var itemManager: ItemManager
     @EnvironmentObject private var userAccountModel: UserAccountModel
@@ -143,19 +145,25 @@ struct AddItem: View {
         }
     }
     private func fetchUserDetails() async {
-        guard (await authManager.currentUser) != nil else {
-               print("No current user found.")
-               return
-           }
-   
-           // Fetch user details
-           await userAccountModel.fetchUserDetails()
-   
-           // Check if location permission is granted before requesting
-           if LocationManager.shared.authroizationStatus == .notDetermined {
-               LocationManager.shared.requestLocationAuthorization()
-           }
-       }
+        guard let currentUser = await authManager.currentUser else {
+            print("No current user found.")
+            return
+        }
+
+        // Fetch user details
+        await userAccountModel.fetchUserDetails()
+
+        // Check if location permission is granted before requesting
+        if LocationManager.shared.authorizationStatus == .notDetermined {
+            do {
+                try await LocationManager.shared.requestLocationAuthorization()
+            } catch {
+                print("Failed to request location authorization: \(error.localizedDescription)")
+                // Handle the error gracefully (e.g., show an alert or fallback behavior)
+            }
+        }
+    }
+
 }
 
 #Preview {

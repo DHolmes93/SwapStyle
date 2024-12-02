@@ -9,21 +9,24 @@ import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseFirestoreSwift
+import SwiftUICore
 
 
 class SwapCart: ObservableObject {
     @Published var items: [Item] = []
+    @EnvironmentObject var itemManager: ItemManager
     
     static let shared = SwapCart()
     
     private init() {}
     
     func addItem(_ item: Item) {
-        if !items.contains(where: { $0.id == item.id }) {
-            items.append(item)
-            saveItemToFirestore(item)
+            if !items.contains(where: { $0.id == item.id }) {
+                items.append(item)
+                itemManager.incrementAddToCartCount(for: item)
+                saveItemToFirestore(item)
+            }
         }
-    }
     
     func removeItem(_ item: Item) {
         items.removeAll() { $0.id == item.id }

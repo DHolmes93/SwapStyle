@@ -359,7 +359,7 @@ struct AddProfilePictureView: View {
         userAccountModel.skills = selectedSkills.map { $0.name }
 
         let profileSaveSuccess = await userAccountModel.createProfile()
-        let imageUploadSuccess = await userAccountModel.uploadProfileImage(image: image, uid: userAccountModel.id ?? "")
+        let imageUploadSuccess = await userAccountModel.uploadProfileImage(image: image)
 
         if profileSaveSuccess && imageUploadSuccess {
             successMessage = "Profile and picture saved successfully!"

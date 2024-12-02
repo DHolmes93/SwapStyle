@@ -8,10 +8,13 @@ import SwiftUI
 import CoreLocation
 
 struct AccountView: View {
+    @Environment(\.colorScheme) var colorScheme // Detect current color scheme
+    
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var itemManager: ItemManager
     @StateObject private var viewModel = UserAccountModel(authManager: AuthManager())
     @StateObject private var locationManager = LocationManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
     
     @State private var isImagePickerPresented = false
     @State private var showImageSourceDialog = false
@@ -29,12 +32,12 @@ struct AccountView: View {
                     ProfileImageView(
                         rating: $viewModel.rating, isImagePickerPresented: $isImagePickerPresented,
                         showImageSourceDialog: $showImageSourceDialog,
-                        sourceType: $sourceType
+                        sourceType: $sourceType, userAccountModel: UserAccountModel.shared
                     )
                     
                     UserFormView(
                         name: $viewModel.name,
-                        email: viewModel.email,
+                        email: authManager.currentUser?.email,
                         phone: authManager.currentUser?.phoneNumber,
                         city: $locationManager.city,
                         state: $locationManager.state,
@@ -74,15 +77,12 @@ struct AccountView: View {
                         userName: viewModel.name,   // The current user's name from the ViewModel
                         currentUserId: authManager.currentUser?.id ?? "unknown" // The current user ID from AuthManager
                     )
-
-
-                    
                 }
                 .padding()
                 .navigationTitle("\(viewModel.name)'s Account")
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        if viewModel.isProfileComplete == false {
+                        if viewModel.isProfileCompleted == false {
                                    createProfileButton
                         }
                     }
@@ -133,16 +133,20 @@ struct AccountView: View {
             print("No current user found.")
             return
         }
-        
+
         // Fetch user details
         await viewModel.fetchUserDetails()
-        
+
         // Check if location permission is granted before requesting
-        if LocationManager.shared.authroizationStatus == .notDetermined {
-            LocationManager.shared.requestLocationAuthorization()
+        if LocationManager.shared.authorizationStatus == .notDetermined {
+            do {
+                try await LocationManager.shared.requestLocationAuthorization()
+            } catch {
+                print("Failed to request location authorization: \(error.localizedDescription)")
+                // Handle the error gracefully (e.g., show an alert or fallback behavior)
+            }
         }
     }
-    
     private func handleLocationAuthorizationChange(_ newStatus: CLAuthorizationStatus) {
         if newStatus == .authorizedWhenInUse || newStatus == .authorizedAlways {
             Task {
@@ -185,8 +189,6 @@ struct AccountView: View {
         }
     }
 }
-
-
 // Interest and Skill Picker Methods...
 struct InterestsSkillsGoalsView: View {
     @ObservedObject var userAccountModel = UserAccountModel(authManager: AuthManager())
@@ -275,71 +277,159 @@ struct InterestsSkillsGoalsView: View {
         }
     }
 }
-
-
-
-
+//struct ProfileImageView: View {
+//    @Binding var rating: Double
+//    @Binding var isImagePickerPresented: Bool
+//    @Binding var showImageSourceDialog: Bool
+//    @Binding var sourceType: UIImagePickerController.SourceType
+//    @EnvironmentObject var authManager: AuthManager
+//    @ObservedObject var userAccountModel: UserAccountModel
+//    
+//    
+//    var body: some View {
+//        HStack {
+//            Button(action: {
+//                showImageSourceDialog.toggle()
+//            }) {
+//                if let profileImageUrl = userAccountModel.profileImageUrl {
+//                    // If the profileImageUrl is available, use it to load the image
+//                    AsyncImage(url: URL(string: profileImageUrl)) { phase in
+//                        switch phase {
+//                        case .empty:
+//                            ProgressView()
+//                                .frame(width: 100, height: 100)
+//                                .background(Color.gray.opacity(0.2))
+//                                .cornerRadius(50)
+//                        case .success(let image):
+//                            image
+//                                .resizable()
+//                                .scaledToFill()
+//                                .frame(width: 100, height: 100)
+//                                .clipShape(Circle())
+//                                .shadow(radius: 10)
+//                        case .failure:
+//                            defaultProfileImageView
+//                        @unknown default:
+//                            EmptyView()
+//                        }
+//                    }
+//                    .frame(width: 100, height: 100)
+//                } else {
+//                    defaultProfileImageView
+//                }
+//            }
+//        }
+//        .onAppear {
+//            // Fetch the profile image URL when the view appears
+//            Task {
+//                await userAccountModel.fetchProfileImageUrl()
+//            }
+//        }
+//        .confirmationDialog("Select Image Source", isPresented: $showImageSourceDialog, titleVisibility: .visible) {
+//            Button("Camera") {
+//                sourceType = .camera
+//                isImagePickerPresented.toggle()
+//            }
+//            Button("Photo Library") {
+//                sourceType = .photoLibrary
+//                isImagePickerPresented.toggle()
+//            }
+//            Button("Cancel", role: .cancel) {}
+//        }
+//        .fullScreenCover(isPresented: $isImagePickerPresented) {
+//            ImagePicker(image: $userAccountModel.profileImage, images: .constant([]), selectionLimit: 1)
+//                .onDisappear {
+//                    Task {
+//                        if let image = userAccountModel.profileImage {
+//                            await uploadProfileImage(image)
+//                        }
+//                    }
+//                }
+//        }
+//    }
+//    
+//    private var defaultProfileImageView: some View {
+//        Image(systemName: "person.circle")
+//            .resizable()
+//            .scaledToFill()
+//            .frame(width: 100, height: 100)
+//            .foregroundColor(.gray)
+//    }
+//    
+//    /// Upload a new profile image to Firebase Storage and update Firestore
+//    private func uploadProfileImage(_ image: UIImage) async {
+//        guard let uid = authManager.currentUser?.id else {
+//            print("Current user UID not found.")
+//            return
+//        }
+//        
+//        let success = await userAccountModel.uploadProfileImage(image: image)
+//        if success {
+//            // Re-fetch profile image after upload
+//            Task {
+//                await userAccountModel.fetchProfileImageUrl()
+//            }
+//        } else {
+//            print("Failed to upload profile image.")
+//        }
+//    }
+//}
+//
 struct ProfileImageView: View {
     @Binding var rating: Double
     @Binding var isImagePickerPresented: Bool
     @Binding var showImageSourceDialog: Bool
     @Binding var sourceType: UIImagePickerController.SourceType
-    @StateObject private var viewModel = UserAccountModel(authManager: AuthManager())
-    @State private var profileImageUrl: String?  // Local state for the image URL
-    
+    @EnvironmentObject var authManager: AuthManager
+    @ObservedObject var userAccountModel: UserAccountModel
     
     var body: some View {
         HStack {
-        Button(action: {
-            showImageSourceDialog.toggle()
-        }) {
-            if let profileImageUrl = profileImageUrl, let url = URL(string: profileImageUrl) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .empty:
-                        ProgressView()
-                            .frame(width: 100, height: 100)
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 100, height: 100)
-                            .clipShape(Circle())
-                    case .failure:
-                        Image(systemName: "person.circle")
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 100, height: 100)
-                            .foregroundColor(.gray)
-                    @unknown default:
-                        EmptyView()
+            Button(action: {
+                showImageSourceDialog.toggle()
+            }) {
+                // Check if profile image URL is available, and if so, load it using AsyncImage
+                if let profileImageUrl = userAccountModel.profileImageUrl {
+                    AsyncImage(url: URL(string: profileImageUrl)) { phase in
+                        switch phase {
+                        case .empty:
+                            ProgressView()
+                                .frame(width: 100, height: 100)
+                                .background(Color.gray.opacity(0.2))
+                                .cornerRadius(50)
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 100, height: 100)
+                                .clipShape(Circle())
+                                .shadow(radius: 10)
+                        case .failure:
+                            defaultProfileImageView
+                        @unknown default:
+                            EmptyView()
+                        }
                     }
-                }
-            } else {
-                Image(systemName: "person.circle")
-                    .resizable()
-                    .scaledToFill()
                     .frame(width: 100, height: 100)
-                    .foregroundColor(.gray)
+                } else if let profileImage = userAccountModel.profileImage {
+                    // Use the UIImage if it's available
+                    Image(uiImage: profileImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 100, height: 100)
+                        .clipShape(Circle())
+                        .shadow(radius: 10)
+                } else {
+                    defaultProfileImageView
+                }
             }
-            // Rating Display
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Rating")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Text("\(rating, specifier: "%.1f") / 5")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(.blue)
-            }
-        }
         }
         .onAppear {
-                   Task {
-                       await fetchProfileImageUrl()
-                   }
-               }
+            // Fetch the profile image URL when the view appears
+            Task {
+                await userAccountModel.fetchProfileImageUrl()
+            }
+        }
         .confirmationDialog("Select Image Source", isPresented: $showImageSourceDialog, titleVisibility: .visible) {
             Button("Camera") {
                 sourceType = .camera
@@ -351,27 +441,56 @@ struct ProfileImageView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        .fullScreenCover(isPresented: $isImagePickerPresented) {
+            ImagePicker(image: $userAccountModel.profileImage, images: .constant([]), selectionLimit: 1)
+                .onDisappear {
+                    Task {
+                        if let image = userAccountModel.profileImage {
+                            await uploadProfileImage(image)
+                        }
+                    }
+                }
+        }
     }
     
-    private func fetchProfileImageUrl() async {
-        if let url = await viewModel.fetchProfileImageUrl() {
-            DispatchQueue.main.async {
-                self.profileImageUrl = url
+    private var defaultProfileImageView: some View {
+        Image(systemName: "person.circle")
+            .resizable()
+            .scaledToFill()
+            .frame(width: 100, height: 100)
+            .foregroundColor(.gray)
+    }
+    
+    /// Upload a new profile image to Firebase Storage and update Firestore
+    private func uploadProfileImage(_ image: UIImage) async {
+        guard let uid = authManager.currentUser?.id else {
+            print("Current user UID not found.")
+            return
+        }
+        
+        let success = await userAccountModel.uploadProfileImage(image: image)
+        if success {
+            // Re-fetch profile image after upload
+            Task {
+                await userAccountModel.fetchProfileImageUrl()
             }
+        } else {
+            print("Failed to upload profile image.")
         }
     }
 }
 
+
+
 struct UserFormView: View {
     @Binding var name: String
-    var email: String?
+    var email: String? // Email is optional and binding
     var phone: String?
     @Binding var city: String
     @Binding var state: String
     @Binding var zipcode: String
     @Binding var country: String
-    
-    
+
     @State private var isEditingName = false
     @State private var showingCityAutocomplete = false
     @ObservedObject var locationManager = LocationManager.shared
@@ -379,10 +498,9 @@ struct UserFormView: View {
     @StateObject private var userAccountModel = UserAccountModel(authManager: AuthManager())
     @State private var selectedInterestIndex: Int = 0
     @State private var selectedSkillIndex: Int = 0
-    
+
     var body: some View {
         VStack(spacing: 20) {
-            
             // Editable Name Field
             HStack {
                 if isEditingName {
@@ -409,17 +527,21 @@ struct UserFormView: View {
             }
             .padding(.horizontal)
             
-            // Optional Email and Phone Display
-            if let email = email {
-                HStack {
-                    Image(systemName: "envelope.fill")
-                        .foregroundColor(.blue)
-                    Text(email)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal)
-            }
-            
+            // Display Email (Non-editable)
+                       if let email = email {
+                           HStack {
+                               Image(systemName: "envelope.fill")
+                                   .foregroundColor(.blue)
+                               Text(email)
+                                   .foregroundColor(.primary)
+                                   .font(.body)
+                                   .lineLimit(1)
+                                   .truncationMode(.tail)
+                           }
+                           .padding(.horizontal)
+                       }
+
+            // Optional Phone Display
             if let phone = phone {
                 HStack {
                     Image(systemName: "phone.fill")
@@ -429,7 +551,7 @@ struct UserFormView: View {
                 }
                 .padding(.horizontal)
             }
-            
+
             // Location Information
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
@@ -440,7 +562,7 @@ struct UserFormView: View {
                         .foregroundColor(city.isEmpty ? .gray : .primary)
                         .fontWeight(city.isEmpty ? .regular : .bold)
                 }
-                
+
                 if !city.isEmpty {
                     HStack {
                         Text("State:")
@@ -449,7 +571,7 @@ struct UserFormView: View {
                         Text(state.isEmpty ? "N/A" : state)
                             .foregroundColor(state.isEmpty ? .gray : .primary)
                     }
-                    
+
                     HStack {
                         Text("Country:")
                             .foregroundColor(.secondary)
@@ -457,7 +579,7 @@ struct UserFormView: View {
                         Text(country.isEmpty ? "N/A" : country)
                             .foregroundColor(country.isEmpty ? .gray : .primary)
                     }
-                    
+
                     HStack {
                         Text("Zipcode:")
                             .foregroundColor(.secondary)
@@ -468,23 +590,139 @@ struct UserFormView: View {
                 }
             }
             .padding(.horizontal)
-            
-        
-            .padding(.horizontal)
-            
+
             // Interests, Skills, and Goals View
             InterestsSkillsGoalsView(userAccountModel: userAccountModel)
-            
+
             Spacer()
         }
-//        .onChange(of: city) { newValue in
-//            print("City updated to: \(newValue)")
-//            print("State: \(state), Country: \(country), Zipcode: \(zipcode)")
-//        }
         .padding(.top)
-//        .background(Color(UIColor.systemGroupedBackground).edgesIgnoringSafeArea(.all))
     }
 }
+
+//struct UserFormView: View {
+//    @Binding var name: String
+//    @Binding var email: String?
+//    var phone: String?
+//    @Binding var city: String
+//    @Binding var state: String
+//    @Binding var zipcode: String
+//    @Binding var country: String
+//    
+//    
+//    @State private var isEditingName = false
+//    @State private var showingCityAutocomplete = false
+//    @ObservedObject var locationManager = LocationManager.shared
+//    @ObservedObject var categoryManager = CategoryManager.shared
+//    @StateObject private var userAccountModel = UserAccountModel(authManager: AuthManager())
+//    @State private var selectedInterestIndex: Int = 0
+//    @State private var selectedSkillIndex: Int = 0
+//    
+//    var body: some View {
+//        VStack(spacing: 20) {
+//            
+//            // Editable Name Field
+//            HStack {
+//                if isEditingName {
+//                    TextField("Enter your name", text: $name, onCommit: {
+//                        isEditingName = false
+//                    })
+//                    .padding(8)
+//                    .background(Color.gray.opacity(0.1))
+//                    .cornerRadius(8)
+//                    .frame(maxWidth: .infinity)
+//                } else {
+//                    Text(name.isEmpty ? "No Name Set" : name)
+//                        .font(.title2)
+//                        .fontWeight(.bold)
+//                    Spacer()
+//                    Button(action: {
+//                        isEditingName = true
+//                    }) {
+//                        Text("Edit")
+//                            .font(.subheadline)
+//                            .foregroundColor(.blue)
+//                    }
+//                }
+//            }
+//            .padding(.horizontal)
+//            
+//            // Optional Email and Phone Display
+//            if let email = email {
+//                HStack {
+//                    Image(systemName: "envelope.fill")
+//                        .foregroundColor(.blue)
+//                    Text(email)
+//                        .foregroundColor(.secondary)
+//                }
+//                .padding(.horizontal)
+//            }
+//            
+//            if let phone = phone {
+//                HStack {
+//                    Image(systemName: "phone.fill")
+//                        .foregroundColor(.green)
+//                    Text(phone)
+//                        .foregroundColor(.secondary)
+//                }
+//                .padding(.horizontal)
+//            }
+//            
+//            // Location Information
+//            VStack(alignment: .leading, spacing: 8) {
+//                HStack {
+//                    Text("City:")
+//                        .foregroundColor(.secondary)
+//                    Spacer()
+//                    Text(city.isEmpty ? "N/A" : city)
+//                        .foregroundColor(city.isEmpty ? .gray : .primary)
+//                        .fontWeight(city.isEmpty ? .regular : .bold)
+//                }
+//                
+//                if !city.isEmpty {
+//                    HStack {
+//                        Text("State:")
+//                            .foregroundColor(.secondary)
+//                        Spacer()
+//                        Text(state.isEmpty ? "N/A" : state)
+//                            .foregroundColor(state.isEmpty ? .gray : .primary)
+//                    }
+//                    
+//                    HStack {
+//                        Text("Country:")
+//                            .foregroundColor(.secondary)
+//                        Spacer()
+//                        Text(country.isEmpty ? "N/A" : country)
+//                            .foregroundColor(country.isEmpty ? .gray : .primary)
+//                    }
+//                    
+//                    HStack {
+//                        Text("Zipcode:")
+//                            .foregroundColor(.secondary)
+//                        Spacer()
+//                        Text(zipcode.isEmpty ? "N/A" : zipcode)
+//                            .foregroundColor(zipcode.isEmpty ? .gray : .primary)
+//                    }
+//                }
+//            }
+//            .padding(.horizontal)
+//            
+//        
+//            .padding(.horizontal)
+//            
+//            // Interests, Skills, and Goals View
+//            InterestsSkillsGoalsView(userAccountModel: userAccountModel)
+//            
+//            Spacer()
+//        }
+////        .onChange(of: city) { newValue in
+////            print("City updated to: \(newValue)")
+////            print("State: \(state), Country: \(country), Zipcode: \(zipcode)")
+////        }
+//        .padding(.top)
+////        .background(Color(UIColor.systemGroupedBackground).edgesIgnoringSafeArea(.all))
+//    }
+//}
 
 struct ActionButtonsView: View {
     var onSave: () -> Void
