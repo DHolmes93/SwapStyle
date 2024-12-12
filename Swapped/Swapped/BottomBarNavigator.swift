@@ -11,41 +11,49 @@ struct BottomBarNavigator: View {
     @Environment(\.colorScheme) var colorScheme // Detect current color scheme
     @EnvironmentObject var userAccountModel: UserAccountModel
     @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var messageManager: MessageManager
+    @EnvironmentObject var itemManager: ItemManager
+    @EnvironmentObject var swapCaet: SwapCart
     let tabColor = Color("thirdColor")
+    
     
     var body: some View {
         TabView {
             HomeScreenView(userAccountModel: UserAccountModel(authManager: AuthManager()))
+                .environmentObject(MessageManager.shared)
+                .environmentObject(SwapCart.shared)
+                .environmentObject(NotificationManager.shared)
+            
                 .tabItem {
                     Label("Home", systemImage: "house")
-                        .foregroundColor(themeManager.theme.thirdColor)
+                        .foregroundStyle(Color("thirdColor"))
                 }
             
-            SearchScreenView()
+            SearchScreenView(itemManager: ItemManager.shared, swapCart: SwapCart.shared)
                 .tabItem {
                     Label("Search", systemImage: "magnifyingglass")
-                        .foregroundColor(themeManager.theme.thirdColor)
+                        .foregroundStyle(Color("thirdColor"))
                 }
             
             AddItem()
                 .tabItem {
                     Label("Add Item", systemImage: "plus")
-                        .foregroundColor(themeManager.theme.thirdColor)
+                        .foregroundStyle(Color("thirdColor"))
                 }
             
             SwappedView()
                 .tabItem {
                     Label("Swaps", systemImage: "rectangle.2.swap")
-                        .foregroundColor(themeManager.theme.thirdColor)
+                        .foregroundStyle(Color("thirdColor"))
                 }
             
             CurrentUserItemsView()
                 .tabItem {
-                    Label("Account", systemImage: "list.clipboard")
-                        .foregroundColor(themeManager.theme.thirdColor)
+                    Label("Items", systemImage: "list.clipboard")
+                        .foregroundStyle(Color("thirdColor"))
                 }
         }
-        .accentColor(Color(themeManager.theme.mainColor))
+        .accentColor(Color("mainColor"))
     }
 }
 

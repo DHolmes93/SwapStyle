@@ -36,6 +36,7 @@
 		1209587C2C34638E001D7133 /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1209587B2C34638E001D7133 /* ItemView.swift */; };
 		1209B1332C3B3225006A7F79 /* BottomBarNavigator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1209B1322C3B3225006A7F79 /* BottomBarNavigator.swift */; };
 		120BBE372CAE062100900B16 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 12F65C582CA06B7D00B66356 /* GoogleService-Info.plist */; };
+		120FEFFA2D053D7900B78CF7 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120FEFF92D053D7100B78CF7 /* NotificationsView.swift */; };
 		1223D1BD2CBB5FFB00C72C18 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1223D1BC2CBB5FFB00C72C18 /* NetworkMonitor.swift */; };
 		122519362C3F891C008DC9E7 /* SwapLettersEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122519352C3F891C008DC9E7 /* SwapLettersEffect.swift */; };
 		122519382C3F8ACB008DC9E7 /* TossLettersEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122519372C3F8ACB008DC9E7 /* TossLettersEffect.swift */; };
@@ -119,6 +120,7 @@
 		120958792C344B70001D7133 /* AddItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItem.swift; sourceTree = "<group>"; };
 		1209587B2C34638E001D7133 /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		1209B1322C3B3225006A7F79 /* BottomBarNavigator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomBarNavigator.swift; sourceTree = "<group>"; };
+		120FEFF92D053D7100B78CF7 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		1223D1BC2CBB5FFB00C72C18 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		122519352C3F891C008DC9E7 /* SwapLettersEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapLettersEffect.swift; sourceTree = "<group>"; };
 		122519372C3F8ACB008DC9E7 /* TossLettersEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TossLettersEffect.swift; sourceTree = "<group>"; };
@@ -271,6 +273,7 @@
 		120958592C33B096001D7133 /* Screens */ = {
 			isa = PBXGroup;
 			children = (
+				120FEFF92D053D7100B78CF7 /* NotificationsView.swift */,
 				12E1D3162CF261BB00831E3B /* CategoryItemsView.swift */,
 				120958602C33B1C9001D7133 /* HomeScreenView.swift */,
 				120958622C33B226001D7133 /* AccountView.swift */,
@@ -516,6 +519,7 @@
 				12E1D3172CF261C900831E3B /* CategoryItemsView.swift in Sources */,
 				12854DA72C3C754200C34C92 /* itemRowView.swift in Sources */,
 				12FF7E292CC898F7000AFB5B /* InterestsGoalsManager.swift in Sources */,
+				120FEFFA2D053D7900B78CF7 /* NotificationsView.swift in Sources */,
 				1209586E2C33B412001D7133 /* CreateProfileView.swift in Sources */,
 				128EBE232C37255C002F9C0D /* SwappedView.swift in Sources */,
 				1223D1BD2CBB5FFB00C72C18 /* NetworkMonitor.swift in Sources */,

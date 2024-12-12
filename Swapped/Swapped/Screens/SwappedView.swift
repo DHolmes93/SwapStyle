@@ -12,29 +12,35 @@ struct SwappedView: View {
     @EnvironmentObject var swapCart: SwapCart
     @State private var selectedView = "Swapped Items"
     var body: some View {
-        VStack {
-            Picker("Select View", selection: $selectedView) {
-                Text("Swapped Items").tag("Swapped Items")
-                Text("Cart").tag("Cart")
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16)  {
+                Picker("Select View", selection: $selectedView) {
+                    Text("Swaps").tag("Swaps")
+                    Text("Cart").tag("Cart")
                     
                 }
-            .pickerStyle(SegmentedPickerStyle())
-            .padding()
-            
-            if selectedView == "Cart" {
-                SwapCartView()
-            } else {
-                SwappedItemsView()
+                .pickerStyle(SegmentedPickerStyle())
+//                .padding()
                 
+                if selectedView == "Cart" {
+                    SwapCartView()
+                } else {
+                    SwappedItemsView()
+                    
+                }
             }
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Just Swap")
+                        .font(.headline)
+                        .foregroundStyle(Color("thirdColor"))
+                }
+            }
+            
+            
         }
-        .navigationTitle("Swapped Items")
     }
-        
-    
 }
-
-
 
 #Preview {
     SwappedView()

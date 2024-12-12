@@ -145,7 +145,7 @@ struct AddItem: View {
         }
     }
     private func fetchUserDetails() async {
-        guard let currentUser = await authManager.currentUser else {
+        guard (await authManager.currentUser) != nil else {
             print("No current user found.")
             return
         }
@@ -172,53 +172,3 @@ struct AddItem: View {
         .environmentObject(CategoryManager.shared)
         .environmentObject(UserAccountModel.shared) // Add UserAccountModel to preview
 }
-//struct AddItem: View {
-//    @ObservedObject var userAccountModel = UserAccountModel.shared
-//    @StateObject var viewModel = AddItemViewModel() // Ensure your view model is also properly managed
-//    @ObservedObject var authManager = AuthManager.shared
-//
-//    var body: some View {
-//        NavigationStack {
-//            ScrollView {
-//                VStack(alignment: .leading, spacing: 20) {
-//                    
-//                    // Check if user profile is complete
-//                    if !userAccountModel.isProfileCompleted {
-//                        Text("Please complete your profile before adding items.")
-//                            .foregroundColor(.red)
-//                            .font(.subheadline)
-//                            .padding()
-//                    } else {
-//                        // Image Picker
-//                        Button(action: {
-//                            viewModel.showImageSourceDialog.toggle()
-//                        }) {
-//                            Text("Add Photos")
-//                                .foregroundColor(.black)
-//                                .font(.headline)
-//                                .padding()
-//                        }
-//                        .confirmationDialog("Select Image Source", isPresented: $viewModel.showImageSourceDialog, titleVisibility: .visible) {
-//                            Button("Camera") {
-//                                viewModel.sourceType = .camera
-//                                viewModel.isImagePickerPresented.toggle()
-//                            }
-//                            Button("Photo Library") {
-//                                viewModel.sourceType = .photoLibrary
-//                                viewModel.isImagePickerPresented.toggle()
-//                            }
-//                            Button("Cancel", role: .cancel) {}
-//                        }
-//                        .sheet(isPresented: $viewModel.isImagePickerPresented) {
-//                            ImagePicker(image: .constant(nil), images: $viewModel.images, selectionLimit: 5, sourceType: viewModel.sourceType)
-//                        }
-//                    }
-//                }
-//                .padding()
-//            }
-//
-//            .navigationTitle("Add Item")
-//        }
-//    }
-//
-//}

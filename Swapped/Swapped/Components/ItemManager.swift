@@ -168,51 +168,308 @@ class ItemManager: ObservableObject {
         self.items = sortedItems
         return sortedItems
     }
-
-
-    func requestSwap(fromItemId: String, toUserId: String, toItemId: String) async throws {
+    func fetchItemsForCurrentUser() async throws -> [Item] {
         guard let currentUserId = Auth.auth().currentUser?.uid else {
             throw NSError(domain: "No user logged in", code: 401, userInfo: nil)
         }
-
-        let swapRequest: [String: Any] = [
-            "fromUserId": currentUserId,
-            "fromItemId": fromItemId,
-            "toUserId": toUserId,
-            "toItemId": toItemId,
-            "status": "pending"
-        ]
-
-        try await db.collection("swapRequests").addDocument(data: swapRequest)
+        return try await fetchItems(for: currentUserId)
     }
 
+    func fetchItemsForOtherUser(otherUserId: String) async throws -> [Item] {
+        return try await fetchItems(for: otherUserId)
+    }
+
+    private func fetchItems(for userId: String) async throws -> [Item] {
+        let userItemsRef = db.collection("users").document(userId).collection("items")
+        let snapshot = try await userItemsRef.getDocuments()
+
+        let items = snapshot.documents.compactMap { document in
+            var item = try? document.data(as: Item.self)
+            item?.id = document.documentID
+            return item
+        }
+
+        if userId == Auth.auth().currentUser?.uid {
+            self.items = items // Update current user's items only
+        }
+        return items
+    }
+    
+//    // MARK: - Request Swap
+    // MARK: - Request Swap
+    // MARK: - Request Swap
+    func requestSwap(
+        fromItemId: String,
+        toUserId: String,
+        toItemId: String,
+        fromUserName: String,
+        toUserName: String,
+        itemName: String,
+        timestamp: Date
+    ) async throws {
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
+            throw NSError(domain: "No user logged in", code: 401, userInfo: nil)
+        }
+        
+        let swapRequestId = UUID().uuidString
+
+        do {
+            // Create the swap request data
+            let swapRequest: [String: Any] = [
+                "id": swapRequestId,
+                "fromUserId": currentUserId,
+                "fromItemId": fromItemId,
+                "toUserId": toUserId,
+                "toItemId": toItemId,
+                "fromUserName": fromUserName,
+                "toUserName": toUserName,
+                "itemName": itemName,
+                "status": "pending",
+                "timestamp": timestamp
+            ]
+            
+            // Log the swapRequest data for debugging
+            print("Swap request data: \(swapRequest)")
+            
+            // Start a batch write
+            let batch = db.batch()
+            
+            // Set the swap request document in the 'swapRequests' collection (general collection)
+            let swapRequestRef = db.collection("swapRequests").document(swapRequestId)
+            batch.setData(swapRequest, forDocument: swapRequestRef)
+            
+            // Set the swap request in the recipient's 'swapRequests' subcollection
+            let receiverSwapRequestsRef = db.collection("users").document(toUserId).collection("swapRequests").document(swapRequestId)
+            batch.setData(swapRequest, forDocument: receiverSwapRequestsRef)
+            
+            // Set the swap request in the sender's 'swapRequests' subcollection
+            let senderSwapRequestsRef = db.collection("users").document(currentUserId).collection("swapRequests").document(swapRequestId)
+            batch.setData(swapRequest, forDocument: senderSwapRequestsRef)
+            
+            // Create notification data for the receiver
+            let notificationId = UUID().uuidString
+            let notificationData: [String: Any] = [
+                "id": notificationId,
+                "type": "swapRequest",
+                "fromUserId": currentUserId,
+                "toUserId": toUserId,
+                "content": "\(fromUserName) has sent you a swap request for item \(itemName).",
+                "timestamp": timestamp,
+                "status": "unread"
+            ]
+            
+            // Add the notification to the receiver's notifications collection
+            let notificationRef = db.collection("users").document(toUserId).collection("notifications").document(notificationId)
+            batch.setData(notificationData, forDocument: notificationRef)
+            
+            // Commit the batch write
+            try await batch.commit()
+            
+            // Optionally, log or trigger local updates
+            print("Swap request and notification successfully sent.")
+            
+        } catch {
+            // Catch any errors and print the message
+            print("Failed to send swap request: \(error.localizedDescription)")
+            throw error
+        }
+    }
+       // MARK: - Accept Swap Request
     func acceptSwapRequest(swapRequestId: String) async throws {
         let swapRequestRef = db.collection("swapRequests").document(swapRequestId)
         let document = try await swapRequestRef.getDocument()
-
+        
         guard let data = document.data(),
               let fromUserId = data["fromUserId"] as? String,
               let fromItemId = data["fromItemId"] as? String,
               let toUserId = data["toUserId"] as? String,
               let toItemId = data["toItemId"] as? String else {
-            throw NSError(domain: "Invalid Data", code: 500, userInfo: nil)
+            throw NSError(domain: "Invalid Data", code: 500, userInfo: [NSLocalizedDescriptionKey: "Missing or invalid fields in swap request data"])
         }
-
-        try await swapItems(fromUserId: fromUserId, fromItemId: fromItemId, toUserId: toUserId, toItemId: toItemId)
+        
+        // Fetch user names dynamically
+        let fromUserName = try await fetchUserName(for: fromUserId)
+        let toUserName = try await fetchUserName(for: toUserId)
+        
+        // Proceed with swapping items
+        try await swapItems(fromUserId: fromUserId, fromItemId: fromItemId, toUserId: toUserId, toItemId: toItemId, fromUserName: fromUserName, toUserName: toUserName)
+        
+        // Update swap request status
         try await swapRequestRef.updateData(["status": "accepted"])
+        
+        // Update status in user's swapRequests collection
+        let userSwapRequestRef = db.collection("users").document(toUserId).collection("swapRequests").document(swapRequestId)
+        try await userSwapRequestRef.updateData(["status": "accepted"])
     }
 
-    func swapItems(fromUserId: String, fromItemId: String, toUserId: String, toItemId: String) async throws {
+    // Helper function to fetch user names
+    private func fetchUserName(for userId: String) async throws -> String {
+        let userRef = db.collection("users").document(userId)
+        let document = try await userRef.getDocument()
+        guard let data = document.data(), let userName = data["name"] as? String else {
+            throw NSError(domain: "Invalid Data", code: 500, userInfo: [NSLocalizedDescriptionKey: "User name not found for userId: \(userId)"])
+        }
+        return userName
+    }
+    
+    func rejectSwapRequest(swapRequestId: String) async throws {
+        let swapRequestRef = db.collection("swapRequests").document(swapRequestId)
+        let document = try await swapRequestRef.getDocument()
+        
+        guard let data = document.data(),
+              let fromUserId = data["fromUserId"] as? String,
+              let fromItemId = data["fromItemId"] as? String,
+              let toUserId = data["toUserId"] as? String,
+              let toItemId = data["toItemId"] as? String else {
+            throw NSError(domain: "Invalid Data", code: 500, userInfo: [NSLocalizedDescriptionKey: "Missing or invalid fields in swap request data"])
+        }
+        
+        // Fetch user names dynamically
+        let fromUserName = try await fetchUserName(for: fromUserId)
+        let toUserName = try await fetchUserName(for: toUserId)
+        
+        try await rejectItems(fromUserId: fromUserId, fromItemId: fromItemId, toUserId: toUserId, toItemId: toItemId, fromUserName: fromUserName, toUserName: toUserName)
+        
+        
+        // Update swap request status
+        try await swapRequestRef.updateData(["status": "rejected"])
+        
+        // Update status in user's swapRequests collection
+        let userSwapRequestRef = db.collection("users").document(toUserId).collection("swapRequests").document(swapRequestId)
+        try await userSwapRequestRef.updateData(["status": "rejected"])
+    }
+
+    func rejectItems(
+        fromUserId: String,
+        fromItemId: String,
+        toUserId: String,
+        toItemId: String,
+        fromUserName: String,
+        toUserName: String
+    ) async throws {
+        // Get the current user's ID from FirebaseAuth
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
+            throw NSError(domain: "AuthError", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
         let batch = db.batch()
-
-        let fromItemRef = db.collection("users").document(fromUserId).collection("items").document(fromItemId)
-        let toItemRef = db.collection("users").document(toUserId).collection("items").document(toItemId)
-
-        batch.updateData(["uid": toUserId], forDocument: fromItemRef)
-        batch.updateData(["uid": fromUserId], forDocument: toItemRef)
-
+        
+        // References to the items
+        _ = db.collection("users").document(fromUserId).collection("items").document(fromItemId)
+        _ = db.collection("users").document(toUserId).collection("items").document(toItemId)
+        
+        // References to swappedItems collections
+        let fromSwappedItemRef = db.collection("users").document(currentUserId).collection("rejectedItems").document(toItemId)
+        let toSwappedItemRef = db.collection("users").document(toUserId).collection("rejectedItems").document(fromItemId)
+        
+        // Add data to the swappedItems collections
+        batch.setData([
+            "itemId": toItemId,
+            "rejectedUserId": toUserId,
+            "userName": toUserName, // Track the user they swapped with
+            "swapTimestamp": FieldValue.serverTimestamp()
+        ], forDocument: fromSwappedItemRef)
+        
+        batch.setData([
+            "itemId": fromItemId,
+            "rejectedUserId": currentUserId,
+            "userName": fromUserName, // Track the user they swapped with
+            "swapTimestamp": FieldValue.serverTimestamp()
+        ], forDocument: toSwappedItemRef)
+        
+        // Update the `swappedUserId` field in the original item documents
+//        batch.updateData(["rejectedUserId": toUserId], forDocument: fromItemRef)
+//        batch.updateData(["rejectedUserId": fromUserId], forDocument: toItemRef)
+        
+        // Commit the batch operation
         try await batch.commit()
     }
+       
+       // MARK: - Swap Items
+    func swapItems(
+        fromUserId: String,
+        fromItemId: String,
+        toUserId: String,
+        toItemId: String,
+        fromUserName: String,
+        toUserName: String
+    ) async throws {
+        // Get the current user's ID from FirebaseAuth
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
+            throw NSError(domain: "AuthError", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        let batch = db.batch()
+        
+        // References to the items
+        let fromItemRef = db.collection("users").document(fromUserId).collection("items").document(fromItemId)
+        let toItemRef = db.collection("users").document(toUserId).collection("items").document(toItemId)
+        
+        // References to swappedItems collections
+        let fromSwappedItemRef = db.collection("users").document(currentUserId).collection("swappedItems").document(toItemId)
+        let toSwappedItemRef = db.collection("users").document(toUserId).collection("swappedItems").document(fromItemId)
+        
+        // Add data to the swappedItems collections
+        batch.setData([
+            "itemId": toItemId,
+            "swappedWithUserId": toUserId,
+            "userName": toUserName, // Track the user they swapped with
+            "swapTimestamp": FieldValue.serverTimestamp()
+        ], forDocument: fromSwappedItemRef)
+        
+        batch.setData([
+            "itemId": fromItemId,
+            "swappedWithUserId": currentUserId,
+            "userName": fromUserName, // Track the user they swapped with
+            "swapTimestamp": FieldValue.serverTimestamp()
+        ], forDocument: toSwappedItemRef)
+        
+        // Update the `swappedUserId` field in the original item documents
+        batch.updateData(["swappedUserId": toUserId], forDocument: fromItemRef)
+        batch.updateData(["swappedUserId": fromUserId], forDocument: toItemRef)
+        
+        // Commit the batch operation
+        try await batch.commit()
+    }
+
+    func getItemImageURL(for itemId: String) -> URL? {
+        // Example logic: Look up item by ID and return its image URL
+        if let item = items.first(where: { $0.id == itemId }),
+           let imageUrlString = item.imageUrls.first {
+            return URL(string: imageUrlString)
+        }
+        return nil
+    }
+
+    // MARK: - Fetch Swap Requests
+       func fetchSwapRequests(fromUserId userId: String) async throws -> [SwapRequest] {
+           let querySnapshot = try await db.collection("users")
+               .document(userId)
+               .collection("swapRequests")
+               .getDocuments()
+           
+           return querySnapshot.documents.compactMap { document in
+               guard let fromUserId = document.data()["fromUserId"] as? String,
+                     let fromItemId = document.data()["fromItemId"] as? String,
+                     let toUserId = document.data()["toUserId"] as? String,
+                     let toItemId = document.data()["toItemId"] as? String,
+                     let statusString = document.data()["status"] as? String, // Raw string for status
+                     let status = SwapRequestStatus(rawValue: statusString),
+                     let timestamp = document.data()["timestamp"] as? Timestamp else {
+                   return nil
+               }
+               
+               return SwapRequest(
+                   id: document.documentID,
+                   fromUserId: fromUserId,
+                   fromItemId: fromItemId,
+                   toUserId: toUserId,
+                   toItemId: toItemId,
+                   status: status,
+                   timestamp: timestamp.dateValue()
+               )
+           }
+       }
 
     func fetchAllItems() async throws -> [Item] {
         let snapshot = try await db.collectionGroup("items").getDocuments()
@@ -258,25 +515,6 @@ class ItemManager: ObservableObject {
 
 
     // In LocationManager or ItemManager, depending on where fetchItemsByDistance is implemented
-
-//    func fetchItemsByKm(within radius: Double) async throws -> [Item] {
-//        let (userLocation, _, _, _, _) = try await LocationManager.shared.getCurrentLocation()
-//        let items = try await fetchAllItems()
-//
-//        // If radius is 50 km, fetch all items without filtering by distance
-//        if radius >= 50.0 {
-//            return items
-//        }
-//
-//        // Filter items within the specified radius without reverse geocoding
-//        let filteredItems = items.filter { item in
-//            let itemLocation = CLLocation(latitude: item.latitude, longitude: item.longitude)
-//            let distanceInKm = itemLocation.distance(from: userLocation) / 1000
-//            return distanceInKm <= radius
-//        }
-//
-//        return filteredItems
-//    }
     func fetchItemsByKm(within radius: Double) async throws -> [Item] {
         // Fetch the current user location
         let (userCoordinates, _, _, _, _) = try await LocationManager.shared.getCurrentLocation()
@@ -404,38 +642,7 @@ class ItemManager: ObservableObject {
         
         return items
     }
-
-//    func fetchItemsByCategoryAndSubcategoryAndDistance(category: String?, subcategory: String?, radius: Double?) async throws -> [Item] {
-//        // Fetch user's current location
-//        let (userCoordinates, city, state, zipcode, country) = try await LocationManager.shared.getCurrentLocation()
-//
-//        // Convert CLLocationCoordinate2D to CLLocation
-//        guard let userCoordinates = userCoordinates else {
-//            throw NSError(domain: "LocationError", code: 0, userInfo: [NSLocalizedDescriptionKey: "User location is not available"])
-//        }
-//        let userLocation = CLLocation(latitude: userCoordinates.latitude, longitude: userCoordinates.longitude)
-//
-//        // Fetch all items
-//        var items = try await fetchAllItems()
-//
-//        // Filter by category, subcategory, and radius if provided
-//        if let category = category {
-//            items = items.filter { $0.selectedCategory == category }
-//        }
-//        if let subcategory = subcategory {
-//            items = items.filter { $0.selectedSubCategory == subcategory }
-//        }
-//        if let radius = radius {
-//            items = items.filter { $0.distance(to: userLocation) <= radius }
-//        }
-//
-//        // Sort items by distance to user's location
-//        let sortedItems = items.sorted {
-//            $0.distance(to: userLocation) < $1.distance(to: userLocation)
-//        }
-//
-//        return sortedItems
-//    }
+    
     func fetchItemsByCategoryAndSubcategoryAndDistance(category: String?, subcategory: String?, radius: Double?) async throws -> [Item] {
         // Fetch user's current location
         let (userCoordinates, _, _, _, _) = try await LocationManager.shared.getCurrentLocation()
@@ -465,30 +672,93 @@ class ItemManager: ObservableObject {
         // Sort items by proximity to user's location
         return items.sorted { $0.distance(to: userLocation) < $1.distance(to: userLocation) }
     }
-
-
-    func getUsername(for itemId: String) async throws -> String {
-        let document = try await db.collection("items").document(itemId).getDocument()
-        guard let data = document.data(), let userId = data["uid"] as? String else {
-            throw NSError(domain: "Invalid Data", code: 500, userInfo: nil)
-        }
-
-        let userDoc = try await db.collection("users").document(userId).getDocument()
-        guard let userData = userDoc.data(), let username = userData["username"] as? String else {
-            throw NSError(domain: "Invalid Data", code: 500, userInfo: nil)
+    
+    func getOwnerId(for itemId: String) async throws -> String {
+        print("Attempting to fetch owner ID for itemId: \(itemId)")
+        
+        // Query users collection to find the owner of the item
+        let usersQuery = db.collection("users")
+        let querySnapshot = try await usersQuery.getDocuments()
+        
+        for document in querySnapshot.documents {
+            let userId = document.documentID
+            
+            // Access the items subcollection for this user
+            let itemsRef = db.collection("users").document(userId).collection("items").document(itemId)
+            let itemDoc = try? await itemsRef.getDocument()
+            
+            if let itemData = itemDoc?.data(), let itemOwnerId = itemData["uid"] as? String {
+                print("Item \(itemId) is owned by user: \(itemOwnerId)")
+                return itemOwnerId
+            }
         }
         
-        return username
+        throw NSError(domain: "Item Not Found", code: 404, userInfo: ["message": "No document found for itemId: \(itemId) in any user's items"])
+    }
+    
+    func getUsername(for itemId: String) async throws -> String {
+        print("Attempting to fetch username for itemId: \(itemId)")
+
+        do {
+            // Step 1: Search for the user who owns the item
+            let userSnapshot = try await db.collection("users")
+                .getDocuments()
+            
+            // Iterate over users to find the item
+            for userDoc in userSnapshot.documents {
+                let userId = userDoc.documentID
+                print("Checking user: \(userId)")
+
+                // Step 2: Check if the item exists under this user's items subcollection
+                let itemDoc = try await db.collection("users")
+                    .document(userId)
+                    .collection("items")
+                    .document(itemId)
+                    .getDocument()
+
+                if itemDoc.exists {
+                    // Extract the username from the item's document
+                    guard let username = itemDoc.data()?["userName"] as? String else {
+                        print("Missing 'userName' field for item \(itemId) under user \(userId)")
+                        throw NSError(domain: "Invalid Data", code: 500, userInfo: ["message": "Missing 'userName' for item \(itemId)"])
+                    }
+
+                    print("Item \(itemId) found under user \(userId). Username: \(username)")
+                    return username
+                }
+            }
+
+            // If no item is found in any user's items collection
+            print("Item \(itemId) not found under any user.")
+            throw NSError(domain: "Item Not Found", code: 404, userInfo: ["message": "Item not found for itemId: \(itemId)"])
+        } catch {
+            print("Error fetching document for itemId \(itemId): \(error.localizedDescription)")
+            throw error
+        }
     }
 }
-
-struct SwapRequest: Codable {
+enum SwapRequestStatus: String, Codable {
+    case pending
+    case accepted
+    case rejected
+}
+struct SwapRequest: Identifiable, Codable {
+    var id: String
     var fromUserId: String
     var fromItemId: String
     var toUserId: String
     var toItemId: String
-    var status: String
+    var status: SwapRequestStatus
+    var timestamp: Date
 }
+private func statusColor(for status: SwapRequestStatus) -> Color {
+    switch status {
+    case .pending: return .orange
+    case .accepted: return .green
+    case .rejected: return .red
+    }
+}
+
 
 
     struct Item: Identifiable, Codable {
@@ -524,8 +794,9 @@ struct SwapRequest: Codable {
         func topThreeItems(from items: [Item]) -> [Item] {
             return items.sorted { $0.clickCount > $1.clickCount }.prefix(3).map { $0 }
         }
-        
-
+        func isOwnedByCurrentUser(currentUserId: String) -> Bool {
+            return self.uid == currentUserId
+        }
 
         init(name: String, details: String, originalprice: Double, value: Double, imageUrls: [String], condition: String, timestamp: Date, uid: String, selectedCategory: String, selectedSubCategory: String?, userName: String, latitude: Double, longitude: Double, clickCount: Int) {
                 self.uid = uid
@@ -588,37 +859,3 @@ extension Item {
         return topItems.contains(where: { $0.id == self.id })
     }
 }
-
-
-//extension Item {
-//    func distance(to location: CLLocation) -> Double {
-//        guard let itemLocation = self.location else { return Double.greatestFiniteMagnitude }
-//        return itemLocation.distance(from: location)
-//    }
-//}
-
-// Fetch items by category and distance
-//    func fetchItemsByCategoryAndDistance(category: String?, radius: Double, userLocation: CLLocation, completion: @escaping (Result<[Item], Error>) -> Void) {
-//        LocationManager.shared.getCurrentLocation { result in
-//            switch result {
-//            case .success(let (location, _, _, _)):
-//                self.fetchAllItems { fetchResult in
-//                    switch fetchResult {
-//                    case .success(let items):
-//                        // If category is nil (i.e., "All" is selected), don't filter by category
-//                        let filteredItems = category == nil ? items : items.filter { $0.category == category }
-//
-//                        // Sort by distance to the user's current location
-//                        let sortedItems = filteredItems.sorted { $0.distance(to: location) < $1.distance(to: location) }
-//
-//                        // Return the sorted items
-//                        completion(.success(sortedItems))
-//                    case .failure(let error):
-//                        completion(.failure(error))
-//                    }
-//                }
-//            case .failure(let error):
-//                completion(.failure(error))
-//            }
-//        }
-//    }

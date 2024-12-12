@@ -156,7 +156,7 @@ class AuthManager: NSObject, ObservableObject, ASAuthorizationControllerDelegate
                     let userEmail = authResult.user.email ?? "No Email"
                     
                     // Save user information to Firestore and set currentUser
-                    await self.checkAndCreateUser(uid: userID, name: userName, email: userEmail, phoneNumber: nil)
+                    self.checkAndCreateUser(uid: userID, name: userName, email: userEmail, phoneNumber: nil)
                     
                     completion(true)
                 } catch {

@@ -15,6 +15,7 @@ struct ContentView: View {
     @StateObject private var swapCart = SwapCart.shared
     @StateObject private var categoryManager = CategoryManager.shared
     @StateObject private var itemManager = ItemManager.shared
+    @StateObject private var messageManager = MessageManager.shared
     @StateObject private var profile = Profile()
     @StateObject private var profileItem = ProfileData()
     @State private var isLoading: Bool = true
@@ -88,7 +89,7 @@ struct ContentView: View {
     private func requestLocation() {
         Task {
             do {
-                let (location, city, state, zip, country) = try await LocationManager.shared.getCurrentLocation()
+                let (_, city, state, zip, country) = try await LocationManager.shared.getCurrentLocation()
 //                print("Current location: \(location.coordinate.latitude), \(location.coordinate.longitude)")
                 print("City: \(city), State: \(state), Zip: \(zip), Country: \(country)")
             } catch {
@@ -104,8 +105,11 @@ extension Notification.Name {
     static let userSignedIn = Notification.Name("userSignedIn")
 }
 
-#Preview {
-    ContentView()
-        .environmentObject(AuthManager())
-        .environmentObject(LocationManager())
-}
+//#Preview {
+//    ContentView()
+//        .environmentObject(AuthManager())
+//        .environmentObject(LocationManager())
+//        .environmentObject(MessageManager())
+//        .environmentObject(ItemManager())
+//    
+//}

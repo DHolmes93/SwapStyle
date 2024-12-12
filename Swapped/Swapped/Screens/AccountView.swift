@@ -39,10 +39,10 @@ struct AccountView: View {
                         name: $viewModel.name,
                         email: authManager.currentUser?.email,
                         phone: authManager.currentUser?.phoneNumber,
-                        city: $locationManager.city,
-                        state: $locationManager.state,
-                        zipcode: $locationManager.zipcode,
-                        country: $locationManager.country
+                        city: locationManager.city,
+                        state: locationManager.state,
+                        zipcode: locationManager.zipcode,
+                        country: locationManager.country
                     )
                     
                     ActionButtonsView(
@@ -129,7 +129,7 @@ struct AccountView: View {
     }
     
     private func fetchUserDetails() async {
-        guard let currentUser = await authManager.currentUser else {
+        guard (await authManager.currentUser) != nil else {
             print("No current user found.")
             return
         }
@@ -277,104 +277,6 @@ struct InterestsSkillsGoalsView: View {
         }
     }
 }
-//struct ProfileImageView: View {
-//    @Binding var rating: Double
-//    @Binding var isImagePickerPresented: Bool
-//    @Binding var showImageSourceDialog: Bool
-//    @Binding var sourceType: UIImagePickerController.SourceType
-//    @EnvironmentObject var authManager: AuthManager
-//    @ObservedObject var userAccountModel: UserAccountModel
-//    
-//    
-//    var body: some View {
-//        HStack {
-//            Button(action: {
-//                showImageSourceDialog.toggle()
-//            }) {
-//                if let profileImageUrl = userAccountModel.profileImageUrl {
-//                    // If the profileImageUrl is available, use it to load the image
-//                    AsyncImage(url: URL(string: profileImageUrl)) { phase in
-//                        switch phase {
-//                        case .empty:
-//                            ProgressView()
-//                                .frame(width: 100, height: 100)
-//                                .background(Color.gray.opacity(0.2))
-//                                .cornerRadius(50)
-//                        case .success(let image):
-//                            image
-//                                .resizable()
-//                                .scaledToFill()
-//                                .frame(width: 100, height: 100)
-//                                .clipShape(Circle())
-//                                .shadow(radius: 10)
-//                        case .failure:
-//                            defaultProfileImageView
-//                        @unknown default:
-//                            EmptyView()
-//                        }
-//                    }
-//                    .frame(width: 100, height: 100)
-//                } else {
-//                    defaultProfileImageView
-//                }
-//            }
-//        }
-//        .onAppear {
-//            // Fetch the profile image URL when the view appears
-//            Task {
-//                await userAccountModel.fetchProfileImageUrl()
-//            }
-//        }
-//        .confirmationDialog("Select Image Source", isPresented: $showImageSourceDialog, titleVisibility: .visible) {
-//            Button("Camera") {
-//                sourceType = .camera
-//                isImagePickerPresented.toggle()
-//            }
-//            Button("Photo Library") {
-//                sourceType = .photoLibrary
-//                isImagePickerPresented.toggle()
-//            }
-//            Button("Cancel", role: .cancel) {}
-//        }
-//        .fullScreenCover(isPresented: $isImagePickerPresented) {
-//            ImagePicker(image: $userAccountModel.profileImage, images: .constant([]), selectionLimit: 1)
-//                .onDisappear {
-//                    Task {
-//                        if let image = userAccountModel.profileImage {
-//                            await uploadProfileImage(image)
-//                        }
-//                    }
-//                }
-//        }
-//    }
-//    
-//    private var defaultProfileImageView: some View {
-//        Image(systemName: "person.circle")
-//            .resizable()
-//            .scaledToFill()
-//            .frame(width: 100, height: 100)
-//            .foregroundColor(.gray)
-//    }
-//    
-//    /// Upload a new profile image to Firebase Storage and update Firestore
-//    private func uploadProfileImage(_ image: UIImage) async {
-//        guard let uid = authManager.currentUser?.id else {
-//            print("Current user UID not found.")
-//            return
-//        }
-//        
-//        let success = await userAccountModel.uploadProfileImage(image: image)
-//        if success {
-//            // Re-fetch profile image after upload
-//            Task {
-//                await userAccountModel.fetchProfileImageUrl()
-//            }
-//        } else {
-//            print("Failed to upload profile image.")
-//        }
-//    }
-//}
-//
 struct ProfileImageView: View {
     @Binding var rating: Double
     @Binding var isImagePickerPresented: Bool
@@ -463,7 +365,7 @@ struct ProfileImageView: View {
     
     /// Upload a new profile image to Firebase Storage and update Firestore
     private func uploadProfileImage(_ image: UIImage) async {
-        guard let uid = authManager.currentUser?.id else {
+        guard (authManager.currentUser?.id) != nil else {
             print("Current user UID not found.")
             return
         }
@@ -480,24 +382,19 @@ struct ProfileImageView: View {
     }
 }
 
-
-
 struct UserFormView: View {
     @Binding var name: String
-    var email: String? // Email is optional and binding
-    var phone: String?
-    @Binding var city: String
-    @Binding var state: String
-    @Binding var zipcode: String
-    @Binding var country: String
+    var email: String? // Email is optional
+    var phone: String? // Phone is optional
+    var city: String
+    var state: String
+    var zipcode: String
+    var country: String
 
     @State private var isEditingName = false
-    @State private var showingCityAutocomplete = false
-    @ObservedObject var locationManager = LocationManager.shared
-    @ObservedObject var categoryManager = CategoryManager.shared
-    @StateObject private var userAccountModel = UserAccountModel(authManager: AuthManager())
     @State private var selectedInterestIndex: Int = 0
     @State private var selectedSkillIndex: Int = 0
+    @StateObject private var userAccountModel = UserAccountModel(authManager: AuthManager())
 
     var body: some View {
         VStack(spacing: 20) {
@@ -510,7 +407,6 @@ struct UserFormView: View {
                     .padding(8)
                     .background(Color.gray.opacity(0.1))
                     .cornerRadius(8)
-                    .frame(maxWidth: .infinity)
                 } else {
                     Text(name.isEmpty ? "No Name Set" : name)
                         .font(.title2)
@@ -526,20 +422,23 @@ struct UserFormView: View {
                 }
             }
             .padding(.horizontal)
-            
+
             // Display Email (Non-editable)
-                       if let email = email {
-                           HStack {
-                               Image(systemName: "envelope.fill")
-                                   .foregroundColor(.blue)
-                               Text(email)
-                                   .foregroundColor(.primary)
-                                   .font(.body)
-                                   .lineLimit(1)
-                                   .truncationMode(.tail)
-                           }
-                           .padding(.horizontal)
-                       }
+            if let email = email {
+                HStack {
+                    Image(systemName: "envelope.fill")
+                        .foregroundColor(.blue)
+                    Text(email)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                .padding(.horizontal)
+            } else {
+                Text("Email: N/A")
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+            }
 
             // Optional Phone Display
             if let phone = phone {
@@ -550,43 +449,41 @@ struct UserFormView: View {
                         .foregroundColor(.secondary)
                 }
                 .padding(.horizontal)
+            } else {
+                Text("Phone: N/A")
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
             }
 
             // Location Information
-            VStack(alignment: .leading, spacing: 8) {
+            Section(header: Text("Location").font(.headline)) {
                 HStack {
                     Text("City:")
-                        .foregroundColor(.secondary)
                     Spacer()
                     Text(city.isEmpty ? "N/A" : city)
                         .foregroundColor(city.isEmpty ? .gray : .primary)
                         .fontWeight(city.isEmpty ? .regular : .bold)
                 }
 
-                if !city.isEmpty {
-                    HStack {
-                        Text("State:")
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(state.isEmpty ? "N/A" : state)
-                            .foregroundColor(state.isEmpty ? .gray : .primary)
-                    }
+                HStack {
+                    Text("State:")
+                    Spacer()
+                    Text(state.isEmpty ? "N/A" : state)
+                        .foregroundColor(state.isEmpty ? .gray : .primary)
+                }
 
-                    HStack {
-                        Text("Country:")
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(country.isEmpty ? "N/A" : country)
-                            .foregroundColor(country.isEmpty ? .gray : .primary)
-                    }
+                HStack {
+                    Text("Country:")
+                    Spacer()
+                    Text(country.isEmpty ? "N/A" : country)
+                        .foregroundColor(country.isEmpty ? .gray : .primary)
+                }
 
-                    HStack {
-                        Text("Zipcode:")
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(zipcode.isEmpty ? "N/A" : zipcode)
-                            .foregroundColor(zipcode.isEmpty ? .gray : .primary)
-                    }
+                HStack {
+                    Text("Zipcode:")
+                    Spacer()
+                    Text(zipcode.isEmpty ? "N/A" : zipcode)
+                        .foregroundColor(zipcode.isEmpty ? .gray : .primary)
                 }
             }
             .padding(.horizontal)
@@ -596,134 +493,9 @@ struct UserFormView: View {
 
             Spacer()
         }
-        .padding(.top)
+        .padding()
     }
 }
-
-//struct UserFormView: View {
-//    @Binding var name: String
-//    @Binding var email: String?
-//    var phone: String?
-//    @Binding var city: String
-//    @Binding var state: String
-//    @Binding var zipcode: String
-//    @Binding var country: String
-//    
-//    
-//    @State private var isEditingName = false
-//    @State private var showingCityAutocomplete = false
-//    @ObservedObject var locationManager = LocationManager.shared
-//    @ObservedObject var categoryManager = CategoryManager.shared
-//    @StateObject private var userAccountModel = UserAccountModel(authManager: AuthManager())
-//    @State private var selectedInterestIndex: Int = 0
-//    @State private var selectedSkillIndex: Int = 0
-//    
-//    var body: some View {
-//        VStack(spacing: 20) {
-//            
-//            // Editable Name Field
-//            HStack {
-//                if isEditingName {
-//                    TextField("Enter your name", text: $name, onCommit: {
-//                        isEditingName = false
-//                    })
-//                    .padding(8)
-//                    .background(Color.gray.opacity(0.1))
-//                    .cornerRadius(8)
-//                    .frame(maxWidth: .infinity)
-//                } else {
-//                    Text(name.isEmpty ? "No Name Set" : name)
-//                        .font(.title2)
-//                        .fontWeight(.bold)
-//                    Spacer()
-//                    Button(action: {
-//                        isEditingName = true
-//                    }) {
-//                        Text("Edit")
-//                            .font(.subheadline)
-//                            .foregroundColor(.blue)
-//                    }
-//                }
-//            }
-//            .padding(.horizontal)
-//            
-//            // Optional Email and Phone Display
-//            if let email = email {
-//                HStack {
-//                    Image(systemName: "envelope.fill")
-//                        .foregroundColor(.blue)
-//                    Text(email)
-//                        .foregroundColor(.secondary)
-//                }
-//                .padding(.horizontal)
-//            }
-//            
-//            if let phone = phone {
-//                HStack {
-//                    Image(systemName: "phone.fill")
-//                        .foregroundColor(.green)
-//                    Text(phone)
-//                        .foregroundColor(.secondary)
-//                }
-//                .padding(.horizontal)
-//            }
-//            
-//            // Location Information
-//            VStack(alignment: .leading, spacing: 8) {
-//                HStack {
-//                    Text("City:")
-//                        .foregroundColor(.secondary)
-//                    Spacer()
-//                    Text(city.isEmpty ? "N/A" : city)
-//                        .foregroundColor(city.isEmpty ? .gray : .primary)
-//                        .fontWeight(city.isEmpty ? .regular : .bold)
-//                }
-//                
-//                if !city.isEmpty {
-//                    HStack {
-//                        Text("State:")
-//                            .foregroundColor(.secondary)
-//                        Spacer()
-//                        Text(state.isEmpty ? "N/A" : state)
-//                            .foregroundColor(state.isEmpty ? .gray : .primary)
-//                    }
-//                    
-//                    HStack {
-//                        Text("Country:")
-//                            .foregroundColor(.secondary)
-//                        Spacer()
-//                        Text(country.isEmpty ? "N/A" : country)
-//                            .foregroundColor(country.isEmpty ? .gray : .primary)
-//                    }
-//                    
-//                    HStack {
-//                        Text("Zipcode:")
-//                            .foregroundColor(.secondary)
-//                        Spacer()
-//                        Text(zipcode.isEmpty ? "N/A" : zipcode)
-//                            .foregroundColor(zipcode.isEmpty ? .gray : .primary)
-//                    }
-//                }
-//            }
-//            .padding(.horizontal)
-//            
-//        
-//            .padding(.horizontal)
-//            
-//            // Interests, Skills, and Goals View
-//            InterestsSkillsGoalsView(userAccountModel: userAccountModel)
-//            
-//            Spacer()
-//        }
-////        .onChange(of: city) { newValue in
-////            print("City updated to: \(newValue)")
-////            print("State: \(state), Country: \(country), Zipcode: \(zipcode)")
-////        }
-//        .padding(.top)
-////        .background(Color(UIColor.systemGroupedBackground).edgesIgnoringSafeArea(.all))
-//    }
-//}
-
 struct ActionButtonsView: View {
     var onSave: () -> Void
     var onSignOut: () -> Void
@@ -857,13 +629,10 @@ struct UserItemsView: View {
     }
 }
 
-
-
-
-struct AccountView_Previews: PreviewProvider {
-    static var previews: some View {
-        AccountView()
-            .environmentObject(AuthManager())
-            .environmentObject(ItemManager())
-    }
-}
+//struct AccountView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        AccountView()
+//            .environmentObject(AuthManager())
+//            .environmentObject(ItemManager())
+//    }
+//}

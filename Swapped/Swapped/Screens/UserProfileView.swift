@@ -9,6 +9,7 @@ import SwiftUI
 struct UserProfileView: View {
     @StateObject private var itemManager = ItemManager.shared
     @StateObject private var userAccountModel = UserAccountModel.shared
+
     var userUID: String
 
     var body: some View {
@@ -69,6 +70,74 @@ struct UserProfileView: View {
             // Divider
             Divider()
                 .padding(.vertical, 8)
+            
+            // Goals, Interests, and Skills in Rows with Titles
+                       VStack(spacing: 10) {
+                           // Goals Row
+                           VStack(alignment: .leading, spacing: 4) {
+                               Text("Goals")
+                                   .font(.headline)
+                                   .padding(.bottom, 2)
+                               ScrollView(.horizontal, showsIndicators: false) {
+                                   HStack {
+                                       if userAccountModel.goals.isEmpty {
+                                           Text("No goals found.")
+                                               .foregroundColor(.gray)
+                                       } else {
+                                           ForEach(userAccountModel.goals, id: \.self) { goal in
+                                               Text(goal)
+                                                   .padding(8)
+                                                   .background(Color.purple.opacity(0.2))
+                                                   .cornerRadius(8)
+                                           }
+                                       }
+                                   }
+                               }
+                           }
+                           // Interests Row
+                           VStack(alignment: .leading, spacing: 4) {
+                               Text("Interests")
+                                   .font(.headline)
+                                   .padding(.bottom, 2)
+                               ScrollView(.horizontal, showsIndicators: false) {
+                                   HStack {
+                                       if userAccountModel.interests.isEmpty {
+                                           Text("No interests found.")
+                                               .foregroundColor(.gray)
+                                       } else {
+                                           ForEach(userAccountModel.interests, id: \.self) { interest in
+                                               Text(interest)
+                                                   .padding(8)
+                                                   .background(Color.blue.opacity(0.2))
+                                                   .cornerRadius(8)
+                                           }
+                                       }
+                                   }
+                               }
+                           }
+                           // Skills Row
+                           VStack(alignment: .leading, spacing: 4) {
+                               Text("Skills")
+                                   .font(.headline)
+                                   .padding(.bottom, 2)
+                               ScrollView(.horizontal, showsIndicators: false) {
+                                   HStack {
+                                       if userAccountModel.skills.isEmpty {
+                                           Text("No skills found.")
+                                               .foregroundColor(.gray)
+                                       } else {
+                                           ForEach(userAccountModel.skills, id: \.self) { skill in
+                                               Text(skill)
+                                                   .padding(8)
+                                                   .background(Color.green.opacity(0.2))
+                                                   .cornerRadius(8)
+                                           }
+                                       }
+                                   }
+                               }
+                           }
+                       }
+                       .padding(.horizontal)
 
             // Items Section
             if itemManager.items.isEmpty {

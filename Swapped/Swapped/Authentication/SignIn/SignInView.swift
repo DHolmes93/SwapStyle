@@ -138,9 +138,9 @@ struct SignInView: View {
             return
         }
 
-        let userID = appleIDCredential.user
-        let fullName = appleIDCredential.fullName
-        let email = appleIDCredential.email
+        _ = appleIDCredential.user
+        _ = appleIDCredential.fullName
+        _ = appleIDCredential.email
 
         guard let identityToken = appleIDCredential.identityToken,
               let authCode = appleIDCredential.authorizationCode,

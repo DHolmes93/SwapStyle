@@ -201,7 +201,7 @@ struct CreateProfileView: View {
     private func loadUserLocation() {
         Task {
             do {
-                let (location, city, state, zip, country) = try await LocationManager.shared.getCurrentLocation()
+                let (_, city, state, zip, country) = try await LocationManager.shared.getCurrentLocation()
                 self.city = city
                 self.state = state
                 self.zipcode = zip

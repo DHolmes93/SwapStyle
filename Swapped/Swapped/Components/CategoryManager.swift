@@ -21,7 +21,11 @@ class CategoryManager: ObservableObject {
             Category(name: "Phones"),
             Category(name: "Laptops"),
             Category(name: "Cameras"),
-            Category(name: "Game Systems")
+            Category(name: "Game Systems"),
+            Category(name: "Video Games"),
+            Category(name: "Playstation 5 Games"),
+            Category(name: "Xbox One Games"),
+            Category(name: "Nintendo Switch Games")
         ]),
         Category(name: "Furniture", subcategories: [
             Category(name: "Living Room"),
@@ -34,7 +38,9 @@ class CategoryManager: ObservableObject {
             Category(name: "Women"),
             Category(name: "Kids"),
             Category(name: "Accessories"),
-            Category(name: "Shoes")
+            Category(name: "Woman's Shoes"),
+            Category(name: "Men's Shoes")
+            
         ]),
         Category(name: "Books", subcategories: [
             Category(name: "Fiction"),
@@ -43,16 +49,20 @@ class CategoryManager: ObservableObject {
             Category(name: "Educational")
         ]),
         Category(name: "Toys", subcategories: [
-            Category(name: "Action Figures"),
+            Category(name: "Ages: 3yrs - 5yrs"),
             Category(name: "Puzzles"),
             Category(name: "Educational Toys"),
             Category(name: "Dolls")
         ]),
         Category(name: "Sports", subcategories: [
-            Category(name: "Outdoor Sports"),
-            Category(name: "Indoor Sports"),
+            Category(name: "Football"),
+            Category(name: "Basketball"),
             Category(name: "Fitness Equipment"),
-            Category(name: "Sportswear")
+            Category(name: "Sportswear"),
+            Category(name: "Soccer"),
+            Category(name: "Fishing"),
+            Category(name: "Bowling"),
+            Category(name: "Boxing")
         ]),
         Category(name: "Home & Garden", subcategories: [
             Category(name: "Decor"),

@@ -4,7 +4,6 @@
 //
 //  Created by Donovan Holmes on 7/4/24.
 //
-
 import Foundation
 import FirebaseAuth
 import FirebaseFirestore
@@ -14,11 +13,15 @@ import SwiftUICore
 
 class SwapCart: ObservableObject {
     @Published var items: [Item] = []
-    @EnvironmentObject var itemManager: ItemManager
+    private let itemManager: ItemManager
     
-    static let shared = SwapCart()
+    static let shared = SwapCart(itemManager: .shared)
     
-    private init() {}
+   
+   
+    private init(itemManager: ItemManager) {
+         self.itemManager = itemManager
+     }
     
     func addItem(_ item: Item) {
             if !items.contains(where: { $0.id == item.id }) {
@@ -58,7 +61,7 @@ class SwapCart: ObservableObject {
             "timestamp": Timestamp(date: item.timestamp),
             "category": item.selectedCategory,
             "imageUrls": item.imageUrls,
-            "userName": item.userName ?? "Unknown User"
+            "userName": item.userName
         ]
         db.collection("users").document(uid).collection("cartItems").document(item.id ?? UUID().uuidString).setData(cartItemData) {
             error in

@@ -7,6 +7,7 @@
 import SwiftUI
 import FirebaseFirestore
 import CoreLocation
+import FirebaseAuth
 
 struct IdentifiableURL: Identifiable {
     let id = UUID()
@@ -19,8 +20,8 @@ struct ItemView: View {
     
     @Environment(\.colorScheme) var colorScheme // Detect current color scheme
     
-    @EnvironmentObject private var swapCart: SwapCart
-    @EnvironmentObject private var itemManager: ItemManager
+    @EnvironmentObject var swapCart: SwapCart
+    @EnvironmentObject var itemManager: ItemManager
     @StateObject private var locationManager = LocationManager()
     
     @State private var animateSwap = false
@@ -29,17 +30,28 @@ struct ItemView: View {
     @State private var distanceToItem: Double?
     @State private var askToSwapPressed = false
     @State private var showCurrentUserItems = false
+    @State private var currentUserItems: [Item] = []  // Store current user items
     @State private var fullScreenImage: IdentifiableURL?
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var fetchedUserAccount: UserAccountModel?
+    @State private var fromUserName: String = ""
+    @State private var toUserName: String = ""
     @Environment(\.presentationMode) var presentationMode
     
    
     
-    var currentUserName: String {
-        userAccountModel.name
+    var currentUserId: String {
+        guard let user = Auth.auth().currentUser else {
+            print("User is not logged in.")
+            return "Unknown" // Or handle it in a way that makes sense for your app
+        }
+        return user.uid
     }
+    var currentUserName: String {
+          userAccountModel.name
+      }
+
 
     var body: some View {
         NavigationStack {
@@ -74,13 +86,51 @@ struct ItemView: View {
             }
         }
         .onAppear {
-            determinePossibleSwap()
+            print("Item UID: \(item.uid)")
+            print("Current User ID: \(currentUserId)")
+
+            // Fetch current user's items asynchronously
+            Task {
+                do {
+                    currentUserItems = try await fetchItems()
+                    // Determine if a swap is possible after fetching the items
+                    let canSwap = determinePossibleSwap(for: item, currentUserId: currentUserId, currentUserItems: currentUserItems)
+                    print("Possible Swap: \(canSwap)")
+                    showPossibleSwap = canSwap // Update the state for swap possibility
+                } catch {
+                    print("Error fetching current user items: \(error)")
+                }
+            }
+
+            // Fetch user account for the item's owner
             fetchUserAccount(for: item.uid)
+            
+
+            // Calculate distance to the item asynchronously
             Task {
                 await calculateDistanceToItem()
             }
         }
     }
+
+           // MARK: - Fetch Items
+           private func fetchItems() async throws -> [Item] {
+               guard let uid = Auth.auth().currentUser?.uid else {
+                   throw NSError(domain: "No user logged in", code: 401, userInfo: nil)
+               }
+
+               // Fetch items from Firestore
+               let userItemsRef = Firestore.firestore().collection("users").document(uid).collection("items")
+               let snapshot = try await userItemsRef.getDocuments()
+               let items = snapshot.documents.compactMap { document in
+                   var item = try? document.data(as: Item.self)
+                   item?.id = document.documentID
+                   return item
+               }
+
+               // Return fetched items
+               return items
+           }
 
     // MARK: - View Components
     
@@ -115,7 +165,7 @@ struct ItemView: View {
             }
             .padding(.horizontal)
             
-            if item.userName != currentUserName {
+            if item.uid != currentUserId {
                 Button(action: { addToCart(swapCart: SwapCart.shared) }) {
                     Image(systemName: "cart.badge.plus")
                         .font(.system(size: 30, weight: .bold))
@@ -153,21 +203,45 @@ struct ItemView: View {
                 .font(.subheadline)
         }
     }
-
+    private func fetchUsernames(for item: Item) async {
+        // Fetch the current user's username
+        do {
+            guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+            let currentUser = try await itemManager.getUsername(for: currentUserId)
+            fromUserName = currentUser
+            
+            // Fetch the item's owner's username
+            let ownerUserName = try await itemManager.getUsername(for: item.uid)
+            toUserName = ownerUserName
+        } catch {
+            print("Error fetching usernames: \(error)")
+        }
+    }
     
     private var actionButtonsSection: some View {
         Group {
-                HStack(spacing: 40) {
-                    NavigationLink(destination: MessagingScreenView(currentUserId: currentUserName, otherUserId: userAccountModel.id ?? "Unknown", chatId: "\(item.uid)_chat")) {
+            HStack(spacing: 40) {
+                // Show the "Send Message" button only if the item is not owned by the current user
+                if item.uid != currentUserId {
+                    NavigationLink(destination: MessagingScreenView(currentUserId: currentUserId, otherUserId: item.uid, chatId: "\(item.uid)_chat")) {
                         Text("Send Message")
                             .foregroundStyle(Color("mainColor"))
                             .padding()
                             .background(Color("secondColor"))
                             .cornerRadius(5)
                     }
-                    
+                }
+                
+                // Show the "Ask To Swap" button only if the item is not owned by the current user
+                if item.uid != currentUserId {
                     Button(action: {
-                        showCurrentUserItems = true
+                        Task {
+                            
+                            // Fetch usernames before presenting the sheet
+                            await fetchUsernames(for: item)
+                            showCurrentUserItems = true
+                        }
+                        
                     }) {
                         Text("Ask To Swap")
                             .foregroundStyle(Color("mainColor"))
@@ -176,15 +250,17 @@ struct ItemView: View {
                             .cornerRadius(5)
                     }
                     .sheet(isPresented: $showCurrentUserItems) {
+                        // Pass the fetched usernames to the sheet view
                         CurrentUserItemsView(itemToSwap: item)
                     }
                 }
-                .padding()
-                .background(Color.white) // Example of consistent styling
-                .cornerRadius(10)
+            }
+            .padding()
+            .background(Color.white) // Example of consistent styling
+            .cornerRadius(10)
         }
     }
-
+    
     private func calculateDistanceToItem() async {
         do {
             // Get the user's current location, assuming the method returns a tuple
@@ -212,30 +288,31 @@ struct ItemView: View {
         }
     }
 
-
-
+    // MARK: - View Components
     private var swapPossibleIndicator: some View {
         VStack {
-            if showPossibleSwap && isPossibleSwapMatch(for: item, swapCart: SwapCart.shared) {
+            // Show indicator only if a swap is possible and the item is not owned by the current user
+            if item.uid != currentUserId && showPossibleSwap {
                 Text("Swap Possible")
-                    .font(.largeTitle)
-                    .foregroundColor(Color("mainColor"))
-                    .scaleEffect(animateSwap ? 1.5 : 1.0)
+                    .font(.headline)
+                    .foregroundColor(animateSwap ? .red : .green) // Toggle between colors
+                    .scaleEffect(animateSwap ? 1.5 : 1.0) // Animate scaling
                     .onAppear {
+                        // Start the flashing animation when the view appears
                         withAnimation(Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
                             animateSwap = true
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                            withAnimation {
-                                animateSwap = false
-                        }
                     }
-                }
+            }
+        }
+        .onAppear {
+            // Check if the item is eligible for a swap
+            if item.uid != currentUserId {
+                let canSwap = determinePossibleSwap(for: item, currentUserId: currentUserId, currentUserItems: currentUserItems)
+                showPossibleSwap = canSwap
             }
         }
     }
-
-    
     private var fullScreenImageView: some View {
         AsyncImage(url: fullScreenImage?.url) { phase in
             switch phase {
@@ -256,7 +333,6 @@ struct ItemView: View {
             fullScreenImage = nil
         }
     }
-    
     private func cartButton(swapCart: SwapCart) -> some View {
         NavigationLink(destination: SwapCartView()) {
             ZStack {
@@ -277,26 +353,37 @@ struct ItemView: View {
     }
 
     // MARK: - Functions
-    
     private func addToCart(swapCart: SwapCart) {
         swapCart.addItem(item)
         addedToCart = true
     }
-    
-    private func isPossibleSwapMatch(for item: Item, swapCart: SwapCart) -> Bool {
-        for cartItem in swapCart.items {
-            let priceDifference = abs(item.value - cartItem.value)
-            if item.condition == cartItem.condition && priceDifference <= 20.0 {
+    private func isPossibleSwapMatch(for item: Item, with currentUserItems: [Item]) -> Bool {
+        print("Checking swap criteria for item: \(item.name) (Value: \(item.value), Condition: \(item.condition))")
+        
+        for userItem in currentUserItems {
+            let priceDifference = abs(item.value - userItem.value)
+            print("Comparing with user item: \(userItem.name) (Value: \(userItem.value), Condition: \(userItem.condition))")
+            print("Price difference: \(priceDifference)")
+            
+            if item.condition == userItem.condition && priceDifference <= 20.0 {
+                print("Match found: \(userItem.name)")
                 return true
             }
         }
+        
+        print("No matching items found for swap.")
         return false
     }
-    
-    private func determinePossibleSwap() {
-        showPossibleSwap = !ItemManager.shared.items.contains { $0.id == item.id } && item.userName != currentUserName
+    private func determinePossibleSwap(for item: Item, currentUserId: String, currentUserItems: [Item]) -> Bool {
+        // Ensure the item is not owned by the current user
+        guard item.uid != currentUserId else {
+            print("Item is owned by the current user. Swap not possible.")
+            return false
+        }
+
+        // Check if the user has an item matching the swap criteria
+        return isPossibleSwapMatch(for: item, with: currentUserItems)
     }
-    
     private func fetchUserAccount(for uid: String) {
         Firestore.firestore().collection("users").document(uid).getDocument { document, error in
             if let error = error {
